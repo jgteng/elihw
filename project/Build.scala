@@ -19,7 +19,7 @@ object ElihwBuild extends Build {
   lazy val manager = Project(id = "manager", base = file("manager"))
     .settings(managerSettings: _*)
     .settings(libraryDependencies ++=
-    compile(twitterUtil) ++
+    compile(akka_testkit, akka_actor, akka_testkit) ++
       test(scalaTest))
 
   lazy val client = Project(id = "client", base = file("client"))

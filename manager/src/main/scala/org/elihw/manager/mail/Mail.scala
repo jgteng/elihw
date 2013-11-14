@@ -14,7 +14,7 @@ object MailEnum extends Enumeration{
   val SLAVE = 1;
 }
 
-class BrokerRegister(id:Int, ip:String, port:Int, isMaster:Int, cluster:String, topicNames:List[String]) extends Mail {
-
+case class BrokerRegister(id:Int, ip:String, port:Int, isMaster:Int, cluster:String, val topicNames:List[String]) extends Mail {
+  override def toString: String = "id:" + id + ", ip:" + ip + ", port:" + port + ", isMaster:" + (if (isMaster == 0) "master" else "slave") + ", cluster:" + cluster + ", topicNames:" + topicNames.mkString
 }
 

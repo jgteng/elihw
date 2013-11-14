@@ -1,6 +1,6 @@
 package org.elihw.manager.actor
 
-import akka.actor.Actor
+import akka.actor.{ActorRef, Props, Actor}
 import org.elihw.manager.mail.BrokerRegister
 
 /**
@@ -10,9 +10,15 @@ import org.elihw.manager.mail.BrokerRegister
  */
 class TopicSet extends Actor{
 
+  var topicSet:Set[ActorRef] = Set()
+
   def receive: Actor.Receive = {
     case brokerRegister:BrokerRegister => {
-
+      println(brokerRegister)
+      for(topicName <- brokerRegister.topicNames){
+        val topic = context.actorOf(Props[Topic], "./" + topicName)
+        topicSet + topic
+      }
     }
   }
 }
