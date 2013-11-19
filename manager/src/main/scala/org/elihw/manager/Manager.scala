@@ -1,6 +1,7 @@
 package org.elihw.manager
 
-import akka.actor.{Props, ActorSystem}
+import akka.actor.{ActorRef, Actor, Props, ActorSystem}
+import akka.routing.{BroadcastRouter, FromConfig}
 
 
 /**
@@ -11,9 +12,28 @@ import akka.actor.{Props, ActorSystem}
 object Manager {
 
   def main(args:Array[String]){
-    println(123)
-    val system = ActorSystem("elihw-system")
-//    val greeter = system.actorOf(Props[BrokerListener], "greeter")
+    val system = ActorSystem("manager")
+    val manager = system.actorOf(Props[Manager], "manager")
+    manager ! "start"
   }
 
+}
+
+class Manager extends Actor {
+
+  def receive: Actor.Receive = {
+    case "start" => {
+      println("start")
+    }
+  }
+
+  override def preStart(): Unit = {
+    try {
+      val topicRouter = context.actorOf(Props.empty.withRouter(FromConfig()), "topic-router")
+      val brokerRouter = context.actorOf(Props.empty.withRouter(FromConfig()), "broker-router")
+      val clientRouter = context.actorOf(Props.empty.withRouter(FromConfig()), "client-router")
+    }catch {
+      case e:Exception => e.printStackTrace
+    }
+  }
 }
