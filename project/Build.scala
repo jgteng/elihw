@@ -19,7 +19,7 @@ object ElihwBuild extends Build {
   lazy val manager = Project(id = "manager", base = file("manager"))
     .settings(managerSettings: _*)
     .settings(libraryDependencies ++=
-    compile(akka_slf4j, akka_actor) ++
+    compile(akka_slf4j, akka_actor, whale_common, whale_communication, glowworm) ++
       test(scalaTest, akka_testkit))
 
   lazy val client = Project(id = "client", base = file("client"))
