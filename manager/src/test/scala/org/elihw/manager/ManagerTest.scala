@@ -3,9 +3,9 @@ package org.elihw.manager
 
 import org.scalatest.{Matchers, FlatSpec, WordSpec, BeforeAndAfterAll}
 import akka.testkit.TestActorRef
-import org.elihw.manager.actor.{TopicSet, Broker}
+import org.elihw.manager.actor.Broker
 import akka.actor.{Props, ActorPath, ActorSystem}
-import org.elihw.manager.mail.BrokerRegister
+import org.elihw.manager.mail.BrokerRegisterMail
 import org.elihw.manager.mail.MailEnum._
 
 /**

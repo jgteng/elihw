@@ -1,5 +1,7 @@
 package org.elihw.manager.mail
 
+import org.elihw.manager.communication.BrokerServerHandler
+
 /**
  * User: bigbully
  * Date: 13-10-29
@@ -14,7 +16,13 @@ object MailEnum extends Enumeration{
   val SLAVE = 1;
 }
 
-case class BrokerRegister(id:Int, ip:String, port:Int, isMaster:Int, cluster:String, val topicNames:List[String]) extends Mail {
-  override def toString: String = "id:" + id + ", ip:" + ip + ", port:" + port + ", isMaster:" + (if (isMaster == 0) "master" else "slave") + ", cluster:" + cluster + ", topicNames:" + topicNames.mkString
+case class BrokerRegisterMail(val brokerServerHandler:BrokerServerHandler) extends Mail {
+
 }
+
+case class StartManagerMail(val baseDir:String) extends Mail {
+  override def toString:String = "baseDir:" + baseDir
+}
+
+
 

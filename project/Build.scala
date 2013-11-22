@@ -7,6 +7,7 @@ object ElihwBuild extends Build {
 
   val resolutionRepos = Seq(
 //    "maven" at "http://repo1.maven.org/maven2/",
+//    "Local Maven Repository" at "file://"+Path.userHome.absolutePath+"/program/m2/repository"
 //    "Twitter Maven Repo" at "http://maven.twttr.com/",
 //    "Sonatype snapshots" at "http://oss.sonatype.org/content/repositories/snapshots/"
   )
@@ -19,7 +20,7 @@ object ElihwBuild extends Build {
   lazy val manager = Project(id = "manager", base = file("manager"))
     .settings(managerSettings: _*)
     .settings(libraryDependencies ++=
-    compile(akka_slf4j, akka_actor, whale_common, whale_communication, glowworm) ++
+    compile(akka_slf4j, akka_actor, whale_common, whale_communication, glowworm, ini4j) ++
       test(scalaTest, akka_testkit))
 
   lazy val client = Project(id = "client", base = file("client"))

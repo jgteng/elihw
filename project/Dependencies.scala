@@ -3,10 +3,10 @@ import sbt._
 object Dependencies {
 
   val resolutionRepos = Seq(
-    "Local Maven Repository" at "file://"+Path.userHome.absolutePath+"/program/m2/repository",
-    "Twitter Maven Repo" at "http://maven.twttr.com/",
-    "Sonatype snapshots" at "http://oss.sonatype.org/content/repositories/snapshots/",
-    "Typesafe Repository" at "http://repo.typesafe.com/typesafe/releases/"
+    "Local Maven Repository" at "file://"+Path.userHome.absolutePath+"/program/m2/repository"
+//    "Twitter Maven Repo" at "http://maven.twttr.com/",
+//    "Sonatype snapshots" at "http://oss.sonatype.org/content/repositories/snapshots/",
+//    "Typesafe Repository" at "http://repo.typesafe.com/typesafe/releases/"
   )
 
   def compile   (deps: ModuleID*): Seq[ModuleID] = deps map (_ % "compile")
@@ -21,6 +21,7 @@ object Dependencies {
   var akka_slf4j = "com.typesafe.akka" %% "akka-slf4j" % "2.2.3"
   var akka_testkit = "com.typesafe.akka" %% "akka-testkit" % "2.2.3"
   val whale_common = "com.jd.bdp" % "whale-common" % "1.0-SNAPSHOT"
-  val whale_communication = "com.jd.bdp" % "whale-common" % "1.0-SNAPSHOT"
+  val whale_communication = "com.jd.bdp" % "whale-communication" % "1.0-SNAPSHOT"
   val glowworm = "com.jd.dd" % "glowworm" % "1.0-SNAPSHOT"
+  val ini4j = "org.ini4j" % "ini4j" % "0.5.2"
 }
