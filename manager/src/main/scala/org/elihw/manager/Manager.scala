@@ -7,7 +7,7 @@ import org.elihw.manager.mail.{BrokerRegisterMail, StartManagerMail}
 import java.io.File
 import com.jd.bdp.whale.communication.{ServerWorkerHandler, TransportConnection_Thread, ServerWorkerHandlerFactory, ServerNIO}
 import org.elihw.manager.communication.BrokerServerHandler
-import org.elihw.manager.actor.{BrokerRouter, Broker}
+import org.elihw.manager.actor.{TopicRouter, BrokerRouter, Broker}
 
 
 /**
@@ -28,7 +28,8 @@ object Manager {
 
 class Manager extends Actor {
 
-  var brokerRouter: ActorRef = null
+  var brokerRouter:ActorRef = null
+  var topicRouter: ActorRef = null
   var toBrokerServer:ServerNIO = null
   val broker = context.actorOf(Props[Broker], "1")
 
@@ -41,10 +42,8 @@ class Manager extends Actor {
     val toBrokerPort: Int = Integer.parseInt(sec.get("broker_port"))
 
     toBrokerServer = new ServerNIO(toBrokerPort, new ServerWorkerHandlerFactory () {
-      def createServerWorkerHandler(thread: TransportConnection_Thread): ServerWorkerHandler = {
-        val brokerServerHandler = new BrokerServerHandler
-        brokerRouter ! BrokerRegisterMail(brokerServerHandler)
-        brokerServerHandler
+      def createServerWorkerHandler(connection: TransportConnection_Thread): ServerWorkerHandler = {
+        new BrokerServerHandler(connection)
       }
     })
   }
@@ -57,5 +56,6 @@ class Manager extends Actor {
 
   override def preStart(): Unit = {
     brokerRouter = context.actorOf(Props[BrokerRouter], "brokerRouter")
+    topicRouter = context.actorOf(Props[TopicRouter], "topicRouter")
   }
 }

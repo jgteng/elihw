@@ -1,7 +1,11 @@
 package org.elihw.manager.actor
 
 import akka.actor.{Props, Actor}
-import org.elihw.manager.mail.BrokerRegisterMail
+import org.elihw.manager.mail.RegisterMail
+import akka.pattern.ask
+import akka.actor.Status.Status
+import akka.util.Timeout
+import scala.concurrent.duration._
 
 /**
  * User: biandi
@@ -10,10 +14,13 @@ import org.elihw.manager.mail.BrokerRegisterMail
  */
 class BrokerRouter extends Actor{
 
+  implicit val timeout = Timeout(1 seconds)
+
   def receive: Actor.Receive = {
-    case registerMail:BrokerRegisterMail => {
-      val handler = registerMail.brokerServerHandler
-      context.actorOf(Props[Broker], "")
+    case registerMail:RegisterMail => {
+      val broker = context.actorOf(Props[Broker], registerMail.cmd.getId.toString)
+      val future = broker ? registerMail
+      sender ! future.mapTo[Status]
     }
   }
 }
