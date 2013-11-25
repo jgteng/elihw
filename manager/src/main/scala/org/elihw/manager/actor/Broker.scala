@@ -1,13 +1,10 @@
 package org.elihw.manager.actor
 
 import akka.actor.{ActorRef, Actor}
-import org.elihw.manager.mail.{FreshTopicsMail, RegisterMail}
-import akka.pattern.ask
-import akka.actor.Status.Status
+import org.elihw.manager.mail.{FinishMail, FreshTopicsMail, RegisterMail}
 import org.elihw.manager.communication.BrokerServerHandler
 import scala.collection.JavaConversions.asScalaBuffer
-import akka.util.Timeout
-import scala.concurrent.duration._
+import akka.actor.Status.Success
 
 /**
  * User: bigbully
@@ -15,8 +12,6 @@ import scala.concurrent.duration._
  * Time: 下午7:50
  */
 class Broker extends Actor {
-
-  implicit val timeout = Timeout(1 seconds)
 
   var topicMap: Map[String, ActorRef] = Map()
   var handler: BrokerServerHandler = null
@@ -31,9 +26,13 @@ class Broker extends Actor {
         topicList = topicList :+ topicName
       }
       //根据broker自带的topic刷新所有topic
-      val result = (topicRouter ? FreshTopicsMail(topicList, registerMail.cmd.getId, self)).mapTo[Status]
-      val myTopicMap = result.mapTo[Map[String, ActorRef]].value
-      topicMap ++ myTopicMap
+      topicRouter ! FreshTopicsMail(topicList, registerMail.cmd.getId, self)
+    }
+    case finishMail: FinishMail => {
+      topicMap += (finishMail.topicName -> finishMail.topic)
+    }
+    case Success => {
+      handler finishRegister
     }
   }
 }

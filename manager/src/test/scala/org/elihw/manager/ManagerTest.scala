@@ -1,12 +1,10 @@
 package org.elihw.manager
 
 
-import org.scalatest.{Matchers, FlatSpec, WordSpec, BeforeAndAfterAll}
+import org.scalatest.{Matchers, FlatSpec}
 import akka.testkit.TestActorRef
 import org.elihw.manager.actor.Broker
-import akka.actor.{Props, ActorPath, ActorSystem}
-import org.elihw.manager.mail.BrokerRegisterMail
-import org.elihw.manager.mail.MailEnum._
+import akka.actor.ActorSystem
 
 /**
  * User: bigbully
@@ -14,20 +12,20 @@ import org.elihw.manager.mail.MailEnum._
  * Time: 下午11:28
  */
 
-class ManagerTest extends FlatSpec with Matchers{
+class ManagerTest extends FlatSpec with Matchers {
   implicit val system = ActorSystem("manager")
 
-//  behavior of "TopicSet"
-//
-//  it should "create different topic actor" in {
-//    val topicSet = system.actorOf(Props[TopicSet], "topics")
-//    val brokerRegister = new BrokerRegister(1,  "127.0.0.1", 8080, MASTER, "myCluster", List("topic1", "topic2"))
-//    topicSet ! brokerRegister
-//    val topic1 = system.actorSelection("topics/topic1")
-//    val topic2 = system.actorSelection("topics/topic2")
-//    topic1 shouldNot be (null)
-//    topic2 shouldNot be (null)
-//  }
+  //  behavior of "TopicSet"
+  //
+  //  it should "create different topic actor" in {
+  //    val topicSet = system.actorOf(Props[TopicSet], "topics")
+  //    val brokerRegister = new BrokerRegister(1,  "127.0.0.1", 8080, MASTER, "myCluster", List("topic1", "topic2"))
+  //    topicSet ! brokerRegister
+  //    val topic1 = system.actorSelection("topics/topic1")
+  //    val topic2 = system.actorSelection("topics/topic2")
+  //    topic1 shouldNot be (null)
+  //    topic2 shouldNot be (null)
+  //  }
 
   behavior of "broker"
 

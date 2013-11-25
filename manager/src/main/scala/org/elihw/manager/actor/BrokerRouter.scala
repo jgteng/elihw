@@ -14,13 +14,10 @@ import scala.concurrent.duration._
  */
 class BrokerRouter extends Actor{
 
-  implicit val timeout = Timeout(1 seconds)
-
   def receive: Actor.Receive = {
     case registerMail:RegisterMail => {
       val broker = context.actorOf(Props[Broker], registerMail.cmd.getId.toString)
-      val future = broker ? registerMail
-      sender ! future.mapTo[Status]
+      broker ! registerMail
     }
   }
 }

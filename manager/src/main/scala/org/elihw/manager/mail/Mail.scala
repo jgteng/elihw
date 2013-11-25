@@ -3,6 +3,7 @@ package org.elihw.manager.mail
 import org.elihw.manager.communication.BrokerServerHandler
 import com.jd.bdp.whale.common.command.RegisterBrokerReqCmd
 import akka.actor.ActorRef
+import akka.actor.Status.Success
 
 /**
  * User: bigbully
@@ -19,6 +20,8 @@ case class RegisterMail(val cmd:RegisterBrokerReqCmd, val handler:BrokerServerHa
 case class FreshTopicsMail(val topicList:List[String],val brokerId:Int, val broker:ActorRef) extends TopicMail {}
 
 case class CreateMail(val brokerId:Int, val broker:ActorRef) extends TopicMail {}
+
+case class FinishMail(val topicName:String, val topic: ActorRef) extends TopicMail{}
 
 case class StartManagerMail(val baseDir:String) extends Mail {
   override def toString:String = "baseDir:" + baseDir

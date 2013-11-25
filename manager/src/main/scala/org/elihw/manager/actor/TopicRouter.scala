@@ -2,6 +2,7 @@ package org.elihw.manager.actor
 
 import akka.actor.{ActorRef, Props, Actor}
 import org.elihw.manager.mail.{CreateMail, FreshTopicsMail}
+import akka.actor.Status.Success
 
 /**
  * User: bigbully
@@ -14,13 +15,11 @@ class TopicRouter extends Actor {
 
   def receive: Actor.Receive = {
     case freshTopicsMail: FreshTopicsMail => {
-      var topicMap: Map[String, ActorRef] = Map()
       for (topicName <- freshTopicsMail.topicList) yield {
         val topic = actorOf(Props[Topic], topicName)
         topic ! CreateMail(freshTopicsMail.brokerId, freshTopicsMail.broker)
-        topicMap += (topicName -> topic)
       }
-      sender ! topicMap
+      sender ! Success(self)
     }
   }
 }

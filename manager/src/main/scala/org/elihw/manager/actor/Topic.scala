@@ -1,7 +1,7 @@
 package org.elihw.manager.actor
 
-import akka.actor.{ActorRef, Actor}
-import org.elihw.manager.mail.CreateMail
+import akka.actor.{Status, ActorRef, Actor}
+import org.elihw.manager.mail.{FinishMail, CreateMail}
 
 /**
  * User: bigbully
@@ -13,8 +13,10 @@ class Topic extends Actor {
   var brokerMap: Map[Int, ActorRef] = Map()
 
   def receive = {
-    case creatMail: CreateMail => {
-      brokerMap += (creatMail.brokerId -> creatMail.broker)
+    case createMail: CreateMail => {
+      val broker = createMail.broker
+      brokerMap += (createMail.brokerId -> broker)
+      broker ! FinishMail(self.path.name, self)
     }
   }
 }
