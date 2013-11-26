@@ -1,12 +1,14 @@
 package org.elihw.manager
 
-import akka.actor.{ActorRef, Actor, Props, ActorSystem}
+import akka.actor._
 import org.ini4j.{Profile, Ini}
 import org.elihw.manager.mail.StartManagerMail
 import java.io.File
 import com.jd.bdp.whale.communication.{ServerWorkerHandler, TransportConnection_Thread, ServerWorkerHandlerFactory, ServerNIO}
 import org.elihw.manager.communication.BrokerServerHandler
 import org.elihw.manager.actor.{TopicRouter, BrokerRouter, Broker}
+import akka.event.{LoggingAdapter, Logging}
+import org.elihw.manager.mail.StartManagerMail
 
 
 /**
@@ -25,7 +27,7 @@ object Manager {
 
 }
 
-class Manager extends Actor {
+class Manager extends Actor with ActorLogging{
 
   var brokerRouter: ActorRef = null
   var topicRouter: ActorRef = null
@@ -42,10 +44,11 @@ class Manager extends Actor {
 
     toBrokerServer = new ServerNIO(toBrokerPort, new ServerWorkerHandlerFactory() {
       def createServerWorkerHandler(connection: TransportConnection_Thread): ServerWorkerHandler = {
-        new BrokerServerHandler(connection)
+        new BrokerServerHandler(connection, brokerRouter)
       }
     })
     toBrokerServer.start
+    log.info("broker-server启动完成")
   }
 
   def receive: Actor.Receive = {

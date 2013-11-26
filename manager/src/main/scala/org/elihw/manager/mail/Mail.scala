@@ -1,7 +1,7 @@
 package org.elihw.manager.mail
 
 import org.elihw.manager.communication.BrokerServerHandler
-import com.jd.bdp.whale.common.command.RegisterBrokerReqCmd
+import com.jd.bdp.whale.common.command.{HeartOfBrokerCmd, RegisterBrokerReqCmd}
 import akka.actor.ActorRef
 import akka.actor.Status.Success
 
@@ -16,6 +16,8 @@ sealed trait BrokerMail extends Mail{}
 sealed trait TopicMail extends Mail{}
 
 case class RegisterMail(val cmd:RegisterBrokerReqCmd, val handler:BrokerServerHandler) extends BrokerMail {}
+
+case class BrokerHeartMail(val cmd:HeartOfBrokerCmd) extends BrokerMail{}
 
 case class FreshTopicsMail(val topicList:List[String],val brokerId:Int, val broker:ActorRef) extends TopicMail {}
 

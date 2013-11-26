@@ -15,7 +15,7 @@ class TopicRouter extends Actor {
 
   def receive: Actor.Receive = {
     case freshTopicsMail: FreshTopicsMail => {
-      for (topicName <- freshTopicsMail.topicList) yield {
+      for (topicName <- freshTopicsMail.topicList){
         val topic = actorOf(Props[Topic], topicName)
         topic ! CreateMail(freshTopicsMail.brokerId, freshTopicsMail.broker)
       }
