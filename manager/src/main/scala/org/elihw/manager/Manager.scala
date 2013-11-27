@@ -2,12 +2,10 @@ package org.elihw.manager
 
 import akka.actor._
 import org.ini4j.{Profile, Ini}
-import org.elihw.manager.mail.StartManagerMail
 import java.io.File
 import com.jd.bdp.whale.communication.{ServerWorkerHandler, TransportConnection_Thread, ServerWorkerHandlerFactory, ServerNIO}
-import org.elihw.manager.communication.BrokerServerHandler
-import org.elihw.manager.actor.{TopicRouter, BrokerRouter, Broker}
-import akka.event.{LoggingAdapter, Logging}
+import org.elihw.manager.communication.{ClientServerHandler, BrokerServerHandler}
+import org.elihw.manager.actor.{ClientRouter, TopicRouter, BrokerRouter}
 import org.elihw.manager.mail.StartManagerMail
 
 
@@ -27,16 +25,17 @@ object Manager {
 
 }
 
-class Manager extends Actor with ActorLogging{
+class Manager extends Actor with ActorLogging {
 
   var brokerRouter: ActorRef = null
   var topicRouter: ActorRef = null
-  var toBrokerServer: ServerNIO = null
-  val broker = context.actorOf(Props[Broker], "1")
+  var clientRouter: ActorRef = null
 
+  var toBrokerServer: ServerNIO = null
+  var toClientServer: ServerNIO = null
 
   def initManagerServer(baseDir: String) = {
-    val file = new File(baseDir)
+    val file = new File(baseDir + "/manager.ini")
     val ini = new Ini(file)
     val sec: Profile.Section = ini.get("port")
     val toClientPort: Int = Integer.parseInt(sec.get("client_port"))
@@ -45,6 +44,14 @@ class Manager extends Actor with ActorLogging{
     toBrokerServer = new ServerNIO(toBrokerPort, new ServerWorkerHandlerFactory() {
       def createServerWorkerHandler(connection: TransportConnection_Thread): ServerWorkerHandler = {
         new BrokerServerHandler(connection, brokerRouter)
+      }
+    })
+    toBrokerServer.start
+    log.info("broker-server启动完成")
+
+    toClientServer = new ServerNIO(toClientPort, new ServerWorkerHandlerFactory() {
+      def createServerWorkerHandler(connection: TransportConnection_Thread): ServerWorkerHandler = {
+        new ClientServerHandler(connection, clientRouter)
       }
     })
     toBrokerServer.start
@@ -60,5 +67,6 @@ class Manager extends Actor with ActorLogging{
   override def preStart(): Unit = {
     brokerRouter = context.actorOf(Props[BrokerRouter], "brokerRouter")
     topicRouter = context.actorOf(Props[TopicRouter], "topicRouter")
+    clientRouter = context.actorOf(Props[ClientRouter], "clientRouter")
   }
 }

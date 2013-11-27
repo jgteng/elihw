@@ -31,7 +31,7 @@ class BrokerServerHandler(val connection: TransportConnection_Thread, val broker
         val heartOfBrokerCmd  = PB.parsePBBytes(message.getContent).asInstanceOf[HeartOfBrokerCmd]
         broker ! BrokerHeartMail(heartOfBrokerCmd)
       }
-      case _ => println("不支持的类型")
+      case _ => println("broker不支持的类型")
     }
 
     val result = new Message

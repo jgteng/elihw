@@ -10,7 +10,7 @@
 <configuration>
     <appender name="console" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
-            <pattern>[%p] &lt;%d&gt; %m %l -%n</pattern>
+            <pattern>%date %-5level %logger{80} - %msg%n</pattern>
         </encoder>
     </appender>
     <root level="debug">
