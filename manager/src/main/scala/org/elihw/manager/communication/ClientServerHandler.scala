@@ -15,6 +15,18 @@ import org.elihw.manager.mail.{PublishMail, BrokerHeartMail, RegisterMail}
  */
 class ClientServerHandler (val connection: TransportConnection_Thread, val clientRouter:ActorRef) extends ServerWorkerHandler{
 
+  var client:ActorRef = null
+
+  def finishRegister(client: ActorRef, brokerMap:Map[String, ActorRef]) = {
+    this.client = client
+
+    val result = new Message
+    result.setMsgType(MessageType.CONNECT_MANAGER_SUCCESS)
+    result.setContent(PB.toPBBytes(CommonResponse.successResponse()))
+    connection.sendMsg(result)
+  }
+
+
   def doMsgHandler(message: Message): Message = {
     message.getMsgType match {
       case MessageType.PUBLISH_TOPIC_REQ => {

@@ -1,7 +1,9 @@
 package org.elihw.manager.actor
 
-import akka.actor.{ActorRef, Props, Actor}
-import org.elihw.manager.mail.{CreateMail, FreshTopicsMail}
+import akka.actor._
+import org.elihw.manager.mail.CreateMail
+import org.elihw.manager.mail.PublishTopicsMail
+import akka.actor.Identify
 import akka.actor.Status.Success
 
 /**
@@ -14,11 +16,18 @@ class TopicRouter extends Actor {
   import context._
 
   def receive: Actor.Receive = {
-    case freshTopicsMail: FreshTopicsMail => {
-      for (topicName <- freshTopicsMail.topicList){
-        val topic = actorOf(Props[Topic], topicName)
-        topic ! CreateMail(freshTopicsMail.brokerId, freshTopicsMail.broker)
+    case freshTopicsMail: PublishTopicsMail => {
+      for (topicName <- freshTopicsMail.topicList) {
+        val topic = actorSelection("/user/manager/topicRouter/" + topicName)
+        topic ! Identify(topicName)
       }
+    }
+    case ActorIdentity(topicName, Some(ref)) => {
+      sender ! Success(self)
+    }
+    case ActorIdentity(topicName, None) => {
+      val topic = actorOf(Props[Topic], topicName.asInstanceOf[String])
+      topic ! CreateMail(sender.path.name)
       sender ! Success(self)
     }
   }

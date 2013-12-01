@@ -1,7 +1,7 @@
 package org.elihw.manager.actor
 
 import akka.actor.{ActorLogging, ActorRef, Actor}
-import org.elihw.manager.mail.{BrokerHeartMail, FinishMail, FreshTopicsMail, RegisterMail}
+import org.elihw.manager.mail.{BrokerHeartMail, FinishMail, PublishTopicsMail, RegisterMail}
 import org.elihw.manager.communication.BrokerServerHandler
 import scala.collection.JavaConversions.asScalaBuffer
 import akka.actor.Status.Success
@@ -15,10 +15,12 @@ import com.jd.bdp.whale.common.command.TopicHeartInfo
 class Broker extends Actor with ActorLogging{
 
   var topicMap: Map[String, ActorRef] = Map()
+  var clientMap:Map[String, ActorRef] = Map()
   var handler: BrokerServerHandler = null
   var consumeMsgSec:Long = 0L
   var produceMsgSec:Long = 0L
   var topicHeartInfos:List[TopicHeartInfo] = null
+
 
   def receive = {
     case registerMail: RegisterMail => {
@@ -30,7 +32,7 @@ class Broker extends Actor with ActorLogging{
         topicList :+= topicName
       }
       //根据broker自带的topic刷新所有topic
-      topicRouter ! FreshTopicsMail(topicList, registerMail.cmd.getId, self)
+      topicRouter ! PublishTopicsMail(topicList)
       log.info("broker注册成功！注册信息为:{}", registerMail.cmd)
     }
     case brokerHeartMail:BrokerHeartMail => {

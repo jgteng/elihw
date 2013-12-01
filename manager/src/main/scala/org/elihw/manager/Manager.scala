@@ -54,8 +54,8 @@ class Manager extends Actor with ActorLogging {
         new ClientServerHandler(connection, clientRouter)
       }
     })
-    toBrokerServer.start
-    log.info("broker-server启动完成")
+    toClientServer.start
+    log.info("client-server启动完成")
   }
 
   def receive: Actor.Receive = {
