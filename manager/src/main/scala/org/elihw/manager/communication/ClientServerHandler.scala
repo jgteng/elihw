@@ -5,21 +5,25 @@ import akka.actor.ActorRef
 import com.jd.bdp.whale.communication.message.Message
 import com.jd.bdp.whale.common.communication.{CommonResponse, MessageType}
 import com.jd.dd.glowworm.PB
-import com.jd.bdp.whale.common.command.{PublishTopicReqCmd, HeartOfBrokerCmd, RegisterBrokerReqCmd}
-import org.elihw.manager.mail.{PublishMail, BrokerHeartMail, RegisterMail}
+import com.jd.bdp.whale.common.command.PublishTopicReqCmd
+import org.elihw.manager.mail.PublishMail
+import com.jd.bdp.whale.common.model.Broker
 
 /**
  * User: bigbully
  * Date: 13-11-27
  * Time: 下午9:02
  */
-class ClientServerHandler (val connection: TransportConnection_Thread, val clientRouter:ActorRef) extends ServerWorkerHandler{
+class ClientServerHandler(val connection: TransportConnection_Thread, val clientRouter: ActorRef) extends ServerWorkerHandler {
 
-  var client:ActorRef = null
+  var client: ActorRef = null
 
-  def finishRegister(client: ActorRef, brokerMap:Map[String, ActorRef]) = {
+  def finishRegister(client: ActorRef, brokerMap: Map[String, ActorRef]) = {
     this.client = client
-
+    var brokerSet: Set[Broker] = Set()
+    for ((k,v)<- brokerMap){
+      println(k + v)
+    }
     val result = new Message
     result.setMsgType(MessageType.CONNECT_MANAGER_SUCCESS)
     result.setContent(PB.toPBBytes(CommonResponse.successResponse()))

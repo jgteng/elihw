@@ -4,6 +4,8 @@ import org.elihw.manager.communication.{ClientServerHandler, BrokerServerHandler
 import com.jd.bdp.whale.common.command.{PublishTopicReqCmd, HeartOfBrokerCmd, RegisterBrokerReqCmd}
 import akka.actor.ActorRef
 import akka.actor.Status.Success
+import org.elihw.manager.actor.BaseInfo
+import org.elihw.manager.Util.Model
 
 /**
  * User: bigbully
@@ -16,21 +18,39 @@ sealed trait BrokerMail extends Mail{}
 sealed trait TopicMail extends Mail{}
 sealed trait ClientMail extends Mail{}
 
-case class RegisterMail(val cmd:RegisterBrokerReqCmd, val handler:BrokerServerHandler) extends BrokerMail {}
+case class RegisterMail(val cmd:RegisterBrokerReqCmd, val handler:BrokerServerHandler) extends BrokerMail
 
-case class BrokerHeartMail(val cmd:HeartOfBrokerCmd) extends BrokerMail{}
+case class BrokerHeartMail(val cmd:HeartOfBrokerCmd) extends BrokerMail
 
-case class PublishTopicsMail(val topicList:List[String]) extends TopicMail {}
+case class BaseInfoMail(val id:Int) extends BrokerMail
 
-case class CreateMail(val id:String) extends TopicMail {}
+case class BuildInTopicsMail(val topicList:List[String]) extends TopicMail
 
-case class FinishMail(val topicName:String, val topic: ActorRef) extends TopicMail{}
+case class PublishTopicMail(val topicName:String) extends TopicMail
 
-case class BrokerOfTopicReqMail(val clientId:String) extends TopicMail{}
+case class PublishTopicsMail(val topicList:List[String], implicit val model:Model) extends TopicMail
 
-case class BrokerOfTopicResMail(val brokerMap:Map[String, ActorRef]) extends TopicMail{}
+object PublishTopicsMail {
+  def apply(topicList:List[String])(implicit model:Model) = {
+    new PublishTopicsMail(topicList, model)
+  }
+}
 
-case class PublishMail(val cmd:PublishTopicReqCmd, val handler:ClientServerHandler) extends ClientMail {}
+case class CreateMail(val topicName:String, val creator:ActorRef, val model:Model) extends TopicMail
+
+object CreateMail {
+  def apply(topicName:String, creator:ActorRef)(implicit model:Model):CreateMail = {
+    new CreateMail(topicName, creator, model)
+  }
+}
+
+case class FinishMail(val topicName:String, val topic: ActorRef) extends TopicMail
+
+case class BrokerOfTopicReqMail(val clientId:String) extends TopicMail
+
+case class BrokerOfTopicResMail(val brokerMap:Map[String, ActorRef]) extends TopicMail
+
+case class PublishMail(val cmd:PublishTopicReqCmd, val handler:ClientServerHandler) extends ClientMail
 
 case class StartManagerMail(val baseDir:String) extends Mail {
   override def toString:String = "baseDir:" + baseDir

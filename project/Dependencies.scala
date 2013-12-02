@@ -16,7 +16,6 @@ object Dependencies {
   def container (deps: ModuleID*): Seq[ModuleID] = deps map (_ % "container")
 
   lazy val scalaTest =  "org.scalatest" %% "scalatest" % "2.0.RC1"
-  lazy val twitterUtil = "com.twitter" %% "util-eval" % "6.3.6" withSources() withJavadoc()
   lazy val akka_actor = "com.typesafe.akka" %% "akka-actor" % "2.2.3"
   lazy val akka_slf4j = "com.typesafe.akka" %% "akka-slf4j" % "2.2.3"
   lazy val akka_testkit = "com.typesafe.akka" %% "akka-testkit" % "2.2.3"

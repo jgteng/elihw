@@ -1,46 +1,55 @@
 package org.elihw.manager.actor
 
 import akka.actor.{ActorLogging, ActorRef, Actor}
-import org.elihw.manager.mail.{BrokerHeartMail, FinishMail, PublishTopicsMail, RegisterMail}
+import org.elihw.manager.mail._
 import org.elihw.manager.communication.BrokerServerHandler
 import scala.collection.JavaConversions.asScalaBuffer
-import akka.actor.Status.Success
 import com.jd.bdp.whale.common.command.TopicHeartInfo
+import org.elihw.manager.mail.BrokerHeartMail
+import org.elihw.manager.mail.FinishMail
+import akka.actor.Status.Success
+import org.elihw.manager.mail.RegisterMail
+import org.elihw.manager.Util.{Broker, Model}
 
 /**
  * User: bigbully
  * Date: 13-11-2
  * Time: 下午7:50
  */
-class Broker extends Actor with ActorLogging{
+class Broker extends Actor with ActorLogging {
 
   var topicMap: Map[String, ActorRef] = Map()
-  var clientMap:Map[String, ActorRef] = Map()
+  var clientMap: Map[String, ActorRef] = Map()
   var handler: BrokerServerHandler = null
-  var consumeMsgSec:Long = 0L
-  var produceMsgSec:Long = 0L
-  var topicHeartInfos:List[TopicHeartInfo] = null
+  var consumeMsgSec: Long = 0L
+  var produceMsgSec: Long = 0L
+  var topicHeartInfos: List[TopicHeartInfo] = null
+  var baseInfo: BaseInfo = null
 
+  implicit val model:Model = Model.broker
 
   def receive = {
     case registerMail: RegisterMail => {
+      val cmd = registerMail.cmd
       handler = registerMail.handler
       val topicRouter = context.actorSelection("/user/manager/topicRouter")
       //转换java.util.list为inmutable.list
       var topicList = List[String]()
-      for (topicName <- registerMail.cmd.getTopics) {
+      for (topicName <- cmd.getTopics) {
         topicList :+= topicName
       }
+
       //根据broker自带的topic刷新所有topic
       topicRouter ! PublishTopicsMail(topicList)
-      log.info("broker注册成功！注册信息为:{}", registerMail.cmd)
+      baseInfo = new BaseInfo(cmd.getId, cmd.getIp, cmd.getPort)
+      log.info("broker注册成功！注册信息为:{}", cmd)
     }
-    case brokerHeartMail:BrokerHeartMail => {
+    case brokerHeartMail: BrokerHeartMail => {
       val cmd = brokerHeartMail.cmd
       produceMsgSec = cmd.getProduceMsgSec
       consumeMsgSec = cmd.getConsumerMsgSec
       topicHeartInfos = List[TopicHeartInfo]()
-      for(topicHeartInfo <- cmd.getBrokerHeartInfos){
+      for (topicHeartInfo <- cmd.getBrokerHeartInfos) {
         topicHeartInfos :+= topicHeartInfo
       }
       log.debug("收到心跳信息{}", cmd)
@@ -48,8 +57,13 @@ class Broker extends Actor with ActorLogging{
     case finishMail: FinishMail => {
       topicMap += (finishMail.topicName -> finishMail.topic)
     }
-    case response:Success => {
-      handler finishRegister(self)
+    case response: Success => {
+      handler finishRegister (self)
+    }
+    case baseInfoMail: BaseInfoMail => {
+      sender ! baseInfo
     }
   }
 }
+
+class BaseInfo(val id: Int, val ip: String, val port: Int) {}

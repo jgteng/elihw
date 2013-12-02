@@ -1,10 +1,12 @@
 package org.elihw.manager.actor
 
 import akka.actor._
-import org.elihw.manager.mail.CreateMail
-import org.elihw.manager.mail.PublishTopicsMail
+import org.elihw.manager.mail.{PublishTopicsMail, PublishTopicMail, CreateMail}
 import akka.actor.Identify
-import akka.actor.Status.Success
+import akka.pattern._
+import scala.concurrent.Future
+import akka.util.Timeout
+import scala.concurrent.duration._
 
 /**
  * User: bigbully
@@ -15,20 +17,32 @@ class TopicRouter extends Actor {
 
   import context._
 
+  implicit val timeout = Timeout(1 seconds)
+
   def receive: Actor.Receive = {
-    case freshTopicsMail: PublishTopicsMail => {
-      for (topicName <- freshTopicsMail.topicList) {
+    case publishTopicsMail: PublishTopicsMail => {
+      for (topicName <- publishTopicsMail.topicList) {
         val topic = actorSelection("/user/manager/topicRouter/" + topicName)
-        topic ! Identify(topicName)
+        val creator = sender
+        val future: Future[ActorIdentity] = ask(topic, Identify(topicName)).mapTo[ActorIdentity]
+        future.foreach {
+          (actorIdentity: ActorIdentity) => {
+            actorIdentity match {
+              case ActorIdentity(topicName, Some(ref)) => {
+                ref ! CreateMail(sender.path.name, creator)
+              }
+              case ActorIdentity(topicName, None) => {
+                val topic = actorOf(Props[Topic], topicName.asInstanceOf[String])
+                topic ! CreateMail(sender.path.name, creator)
+              }
+            }
+          }
+        }
       }
     }
-    case ActorIdentity(topicName, Some(ref)) => {
-      sender ! Success(self)
-    }
-    case ActorIdentity(topicName, None) => {
-      val topic = actorOf(Props[Topic], topicName.asInstanceOf[String])
-      topic ! CreateMail(sender.path.name)
-      sender ! Success(self)
+    case publishTopicMail: PublishTopicMail => {
+      val topic = actorSelection("/user/manager/topicRouter/" + publishTopicMail.topicName)
+      topic ! Identify(publishTopicMail.topicName)
     }
   }
 }
