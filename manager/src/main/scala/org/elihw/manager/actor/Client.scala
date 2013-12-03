@@ -12,15 +12,13 @@ import org.elihw.manager.mail.FinishMail
  * Date: 13-11-27
  * Time: 下午9:04
  */
-class Client extends Actor {
+class Client(val handler:ClientServerHandler) extends Actor {
 
-  var handler: ClientServerHandler = null
   var topic: ActorRef = null
   var brokerMap: Map[String, ActorRef] = Map()
 
   def receive = {
     case publishMail: PublishMail => {
-      handler = publishMail.handler
       val topicRouter = context.actorSelection("/user/manager/topicRouter")
       topicRouter ! PublishTopicsMail(List(publishMail.cmd.getTopicName), Mail.CLIENT)
     }

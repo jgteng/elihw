@@ -16,7 +16,7 @@ class BrokerRouter extends Actor{
 
   def receive = {
     case registerMail:RegisterMail => {
-      val broker = context.actorOf(Props[Broker], registerMail.cmd.getId.toString)
+      val broker = context.actorOf(Props(classOf[Broker], registerMail.handler, BaseInfo(registerMail.cmd.getId, registerMail.cmd.getIp, registerMail.cmd.getPort)), registerMail.cmd.getId.toString)
       broker ! registerMail
     }
   }

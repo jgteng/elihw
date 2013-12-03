@@ -1,13 +1,12 @@
 package org.elihw.manager.actor
 
 import akka.actor._
-import org.elihw.manager.mail.{PublishTopicsMail, PublishTopicMail, CreateMail}
+import org.elihw.manager.mail.{PublishTopicsMail, CreateMail}
 import akka.actor.Identify
 import akka.pattern._
 import scala.concurrent.Future
 import akka.util.Timeout
 import scala.concurrent.duration._
-
 
 
 /**
@@ -25,15 +24,21 @@ class TopicRouter extends Actor {
     case publishTopicsMail: PublishTopicsMail => {
       for (topicName <- publishTopicsMail.topicList) {
         val topic = actorSelection("/user/manager/topicRouter/" + topicName)
-        val creator = sender
-        creator match {
-          case broker:Broker => println(1)
-          case client:Client => println(2)
-          case ref:ActorRef => println(3)
+        val future: Future[ActorIdentity] = ask(topic, Identify(topicName)).mapTo[ActorIdentity]
+        future.foreach {
+          (actorIdentity: ActorIdentity) => {
+            actorIdentity match {
+              case ActorIdentity(topicName, Some(ref)) => {
+                ref ! CreateMail(topicName.toString, sender.path.name, publishTopicsMail.from)
+              }
+              case ActorIdentity(topicName, None) => {
+                val topic = actorOf(Props[Topic], topicName.asInstanceOf[String])
+                topic ! CreateMail(topicName.toString, sender.path.name, publishTopicsMail.from)
+              }
+            }
+          }
         }
-
       }
     }
-
   }
 }

@@ -15,20 +15,17 @@ import org.elihw.manager.mail.RegisterMail
  * Date: 13-11-2
  * Time: 下午7:50
  */
-class Broker extends Actor with ActorLogging {
+class Broker(val handler:BrokerServerHandler, val baseInfo:BaseInfo) extends Actor with ActorLogging {
 
   var topicMap: Map[String, ActorRef] = Map()
   var clientMap: Map[String, ActorRef] = Map()
-  var handler: BrokerServerHandler = null
   var consumeMsgSec: Long = 0L
   var produceMsgSec: Long = 0L
   var topicHeartInfos: List[TopicHeartInfo] = null
-  var baseInfo: BaseInfo = null
 
   def receive = {
     case registerMail: RegisterMail => {
       val cmd = registerMail.cmd
-      handler = registerMail.handler
       val topicRouter = context.actorSelection("/user/manager/topicRouter")
       //转换java.util.list为inmutable.list
       var topicList = List[String]()
@@ -38,7 +35,6 @@ class Broker extends Actor with ActorLogging {
 
       //根据broker自带的topic刷新所有topic
       topicRouter ! PublishTopicsMail(topicList, Mail.BROKER)
-      baseInfo = new BaseInfo(cmd.getId, cmd.getIp, cmd.getPort)
       log.info("broker注册成功！注册信息为:{}", cmd)
     }
     case brokerHeartMail: BrokerHeartMail => {
@@ -64,3 +60,8 @@ class Broker extends Actor with ActorLogging {
 }
 
 class BaseInfo(val id: Int, val ip: String, val port: Int) {}
+object BaseInfo {
+  def apply(id: Int, ip: String, port: Int):BaseInfo = {
+    new BaseInfo(id, ip, port)
+  }
+}

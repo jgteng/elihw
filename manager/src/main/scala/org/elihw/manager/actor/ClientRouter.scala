@@ -16,12 +16,12 @@ class ClientRouter extends Actor{
   def receive = {
     case publishMail:PublishMail => {
       publishMail.cmd.getClientType match {
-        case PRODUCER => {
-          val client = actorOf(Props[Producer], publishMail.cmd.getClientId)
+        case 1 => {
+          val client = actorOf(Props(classOf[Producer], publishMail.handler), publishMail.cmd.getClientId)
           client ! publishMail
         }
-        case CONSUMER => {
-          val client = actorOf(Props[Consumer], publishMail.cmd.getClientId)
+        case 0 => {
+          val client = actorOf(Props(classOf[Consumer], publishMail.handler), publishMail.cmd.getClientId)
           client ! publishMail
         }
       }
