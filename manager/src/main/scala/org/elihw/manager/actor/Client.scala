@@ -22,7 +22,7 @@ class Client extends Actor {
     case publishMail: PublishMail => {
       handler = publishMail.handler
       val topicRouter = context.actorSelection("/user/manager/topicRouter")
-      topicRouter ! PublishTopicMail(publishMail.cmd.getTopicName)
+      topicRouter ! PublishTopicsMail(List(publishMail.cmd.getTopicName), Mail.CLIENT)
     }
     case finishMail: FinishMail => {
       topic = finishMail.topic

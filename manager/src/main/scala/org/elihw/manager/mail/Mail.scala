@@ -5,7 +5,6 @@ import com.jd.bdp.whale.common.command.{PublishTopicReqCmd, HeartOfBrokerCmd, Re
 import akka.actor.ActorRef
 import akka.actor.Status.Success
 import org.elihw.manager.actor.BaseInfo
-import org.elihw.manager.Util.Model
 
 /**
  * User: bigbully
@@ -24,25 +23,9 @@ case class BrokerHeartMail(val cmd:HeartOfBrokerCmd) extends BrokerMail
 
 case class BaseInfoMail(val id:Int) extends BrokerMail
 
-case class BuildInTopicsMail(val topicList:List[String]) extends TopicMail
+case class PublishTopicsMail(val topicList:List[String], val from:Int) extends TopicMail
 
-case class PublishTopicMail(val topicName:String) extends TopicMail
-
-case class PublishTopicsMail(val topicList:List[String], implicit val model:Model) extends TopicMail
-
-object PublishTopicsMail {
-  def apply(topicList:List[String])(implicit model:Model) = {
-    new PublishTopicsMail(topicList, model)
-  }
-}
-
-case class CreateMail(val topicName:String, val creator:ActorRef, val model:Model) extends TopicMail
-
-object CreateMail {
-  def apply(topicName:String, creator:ActorRef)(implicit model:Model):CreateMail = {
-    new CreateMail(topicName, creator, model)
-  }
-}
+case class CreateMail(val topicName:String, val id:String, val from:Int) extends TopicMail
 
 case class FinishMail(val topicName:String, val topic: ActorRef) extends TopicMail
 
@@ -59,5 +42,7 @@ case class StartManagerMail(val baseDir:String) extends Mail {
 object Mail extends Enumeration {
   val CONSUMER = 0
   val PRODUCER = 1
+  val BROKER = 2
+  val CLIENT = 3
 }
 

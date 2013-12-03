@@ -9,7 +9,6 @@ import org.elihw.manager.mail.BrokerHeartMail
 import org.elihw.manager.mail.FinishMail
 import akka.actor.Status.Success
 import org.elihw.manager.mail.RegisterMail
-import org.elihw.manager.Util.{Broker, Model}
 
 /**
  * User: bigbully
@@ -26,8 +25,6 @@ class Broker extends Actor with ActorLogging {
   var topicHeartInfos: List[TopicHeartInfo] = null
   var baseInfo: BaseInfo = null
 
-  implicit val model:Model = Model.broker
-
   def receive = {
     case registerMail: RegisterMail => {
       val cmd = registerMail.cmd
@@ -40,7 +37,7 @@ class Broker extends Actor with ActorLogging {
       }
 
       //根据broker自带的topic刷新所有topic
-      topicRouter ! PublishTopicsMail(topicList)
+      topicRouter ! PublishTopicsMail(topicList, Mail.BROKER)
       baseInfo = new BaseInfo(cmd.getId, cmd.getIp, cmd.getPort)
       log.info("broker注册成功！注册信息为:{}", cmd)
     }

@@ -1,7 +1,7 @@
 package org.elihw.manager.actor
 
 import akka.actor.{ActorRef, Actor}
-import org.elihw.manager.mail.{BrokerOfTopicResMail, BrokerOfTopicReqMail, CreateMail}
+import org.elihw.manager.mail.{Mail, BrokerOfTopicResMail, BrokerOfTopicReqMail, CreateMail}
 
 
 /**
@@ -11,14 +11,20 @@ import org.elihw.manager.mail.{BrokerOfTopicResMail, BrokerOfTopicReqMail, Creat
  */
 class Topic extends Actor {
 
+  import context._
+
   var brokerMap: Map[String, ActorRef] = Map()
   var clientMap: Map[String, ActorRef] = Map()
 
   def receive = {
     case createMail: CreateMail => {
-      createMail.model match {
-        case broker: Broker => println(1)
-        case Client => println(2)
+      createMail.from match {
+        case Mail.BROKER => {
+          brokerMap += (createMail.topicName -> actorSelection())
+          broker ! FinishMail(self.path.name, self)
+        }
+      }
+
         //        case broker:Broker => {
         //          brokerMap += (createMail.id -> broker)
         //          broker ! FinishMail(self.path.name, self)
@@ -27,7 +33,7 @@ class Topic extends Actor {
         //          clientMap += (createMail.id -> client)
         //          client ! FinishMail(self.path.name, self)
         //        }
-      }
+
     }
     case brokerOfTopicReqMail: BrokerOfTopicReqMail => {
       sender ! BrokerOfTopicResMail(brokerMap)
