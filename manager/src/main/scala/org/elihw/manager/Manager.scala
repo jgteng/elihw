@@ -6,8 +6,14 @@ import java.io.File
 import com.jd.bdp.whale.communication.{ServerWorkerHandler, TransportConnection_Thread, ServerWorkerHandlerFactory, ServerNIO}
 import org.elihw.manager.communication.{ClientServerHandler, BrokerServerHandler}
 import org.elihw.manager.actor.{ClientRouter, TopicRouter, BrokerRouter}
-import org.elihw.manager.mail.StartManagerMail
-
+import org.elihw.manager.mail.{StatusResMail, Mail, StatusMail, StartManagerMail}
+import java.util.{TimerTask, Timer}
+import akka.util.Timeout
+import scala.concurrent.duration._
+import Mail._
+import org.elihw.manager.actor.Topic.TopicInfo
+import org.elihw.manager.actor.Broker.BrokerInfo
+import org.elihw.manager.actor.Client.ClientInfo
 
 /**
  * User: bigbully
@@ -27,6 +33,8 @@ object Manager {
 
 class Manager extends Actor with ActorLogging {
 
+  implicit val timeout = Timeout(2 seconds)
+
   var brokerRouter: ActorRef = null
   var topicRouter: ActorRef = null
   var clientRouter: ActorRef = null
@@ -37,13 +45,17 @@ class Manager extends Actor with ActorLogging {
   def initManagerServer(baseDir: String) = {
     val file = new File(baseDir + "/manager.ini")
     val ini = new Ini(file)
-    val sec: Profile.Section = ini.get("port")
-    val toClientPort: Int = Integer.parseInt(sec.get("client_port"))
-    val toBrokerPort: Int = Integer.parseInt(sec.get("broker_port"))
+    val portSection: Profile.Section = ini.get("port")
+    val toClientPort: Int = Integer.parseInt(portSection.get("client_port"))
+    val toBrokerPort: Int = Integer.parseInt(portSection.get("broker_port"))
+
+    val managerSection: Profile.Section = ini.get("manager")
+    val brokerRecheckTime = Integer.parseInt(managerSection.get("broker_recheck_time"))
+    val clientRecheckTime = Integer.parseInt(managerSection.get("client_recheck_time"))
 
     toBrokerServer = new ServerNIO(toBrokerPort, new ServerWorkerHandlerFactory() {
       def createServerWorkerHandler(connection: TransportConnection_Thread): ServerWorkerHandler = {
-        new BrokerServerHandler(connection, brokerRouter)
+        new BrokerServerHandler(connection, brokerRouter, brokerRecheckTime)
       }
     })
     toBrokerServer.start
@@ -51,16 +63,59 @@ class Manager extends Actor with ActorLogging {
 
     toClientServer = new ServerNIO(toClientPort, new ServerWorkerHandlerFactory() {
       def createServerWorkerHandler(connection: TransportConnection_Thread): ServerWorkerHandler = {
-        new ClientServerHandler(connection, clientRouter)
+        new ClientServerHandler(connection, clientRouter, clientRecheckTime)
       }
     })
     toClientServer.start
     log.info("client-server启动完成")
+
+    //启动测试timer
+    val timer = new Timer
+    timer.schedule(new TestTimerTask, 0, 10000)
   }
 
   def receive: Actor.Receive = {
     case startMail: StartManagerMail => {
       initManagerServer(startMail.baseDir)
+    }
+    case statusResMail: StatusResMail => {
+      statusResMail.which match {
+        case BROKER => {
+          val vector = for (info <- statusResMail.list) yield {
+            val brokerInfo = info.asInstanceOf[BrokerInfo]
+            (brokerInfo.id, brokerInfo.ip, brokerInfo.port,
+              for (topic <- brokerInfo.topics) yield {
+                topic.name
+              })
+          }
+          println(BROKER + ":" + vector)
+        }
+        case CLIENT => {
+          val vector = for (info <- statusResMail.list) yield {
+            val clientInfo = info.asInstanceOf[ClientInfo]
+            (clientInfo.id, clientInfo.category, clientInfo.group, clientInfo.topic.name,
+              for (broker <- clientInfo.brokers) yield {
+                broker.name
+              }
+              )
+          }
+          println(CLIENT + ":" + vector)
+        }
+        case TOPIC => {
+          val vector = for (info <- statusResMail.list) yield {
+            val topicInfo = info.asInstanceOf[TopicInfo]
+            (topicInfo.name,
+              for (broker <- topicInfo.brokers) yield {
+                broker.name
+              },
+              for (client <- topicInfo.clients) yield {
+                client.name
+              }
+              )
+          }
+          println(TOPIC + ":" + vector)
+        }
+      }
     }
   }
 
@@ -69,4 +124,17 @@ class Manager extends Actor with ActorLogging {
     topicRouter = context.actorOf(Props[TopicRouter], "topicRouter")
     clientRouter = context.actorOf(Props[ClientRouter], "clientRouter")
   }
+
+  class TestTimerTask extends TimerTask {
+
+    def run() = {
+      brokerRouter ! StatusMail(BROKER)
+      clientRouter ! StatusMail(CLIENT)
+      topicRouter ! StatusMail(TOPIC)
+    }
+
+  }
+
 }
+
+
