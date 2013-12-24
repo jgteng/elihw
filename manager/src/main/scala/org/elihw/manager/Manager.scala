@@ -6,7 +6,7 @@ import java.io.File
 import com.jd.bdp.whale.communication.{ServerWorkerHandler, TransportConnection_Thread, ServerWorkerHandlerFactory, ServerNIO}
 import org.elihw.manager.communication.{ClientServerHandler, BrokerServerHandler}
 import org.elihw.manager.actor.{ClientRouter, TopicRouter, BrokerRouter}
-import org.elihw.manager.mail.{StatusResMail, Mail, StatusMail, StartManagerMail}
+import org.elihw.manager.mail.{StatusResMail, Mail, StartManagerMail}
 import java.util.{TimerTask, Timer}
 import akka.util.Timeout
 import scala.concurrent.duration._
@@ -53,6 +53,13 @@ class Manager extends Actor with ActorLogging {
     val brokerRecheckTime = Integer.parseInt(managerSection.get("broker_recheck_time"))
     val clientRecheckTime = Integer.parseInt(managerSection.get("client_recheck_time"))
 
+    val maxBrokerOfTopic = Integer.parseInt(managerSection.get("max_broker_of_topic"))
+    val maxTopicInABroker = Integer.parseInt(managerSection.get("max_topic_in_a_broker"))
+
+    brokerRouter = context.actorOf(Props(classOf[BrokerRouter], maxBrokerOfTopic, maxTopicInABroker), "brokerRouter")
+    topicRouter = context.actorOf(Props[TopicRouter], "topicRouter")
+    clientRouter = context.actorOf(Props[ClientRouter], "clientRouter")
+
     toBrokerServer = new ServerNIO(toBrokerPort, new ServerWorkerHandlerFactory() {
       def createServerWorkerHandler(connection: TransportConnection_Thread): ServerWorkerHandler = {
         new BrokerServerHandler(connection, brokerRouter, brokerRecheckTime)
@@ -63,6 +70,7 @@ class Manager extends Actor with ActorLogging {
 
     toClientServer = new ServerNIO(toClientPort, new ServerWorkerHandlerFactory() {
       def createServerWorkerHandler(connection: TransportConnection_Thread): ServerWorkerHandler = {
+        log.debug("新建一个clientHandler")
         new ClientServerHandler(connection, clientRouter, clientRecheckTime)
       }
     })
@@ -119,18 +127,12 @@ class Manager extends Actor with ActorLogging {
     }
   }
 
-  override def preStart(): Unit = {
-    brokerRouter = context.actorOf(Props[BrokerRouter], "brokerRouter")
-    topicRouter = context.actorOf(Props[TopicRouter], "topicRouter")
-    clientRouter = context.actorOf(Props[ClientRouter], "clientRouter")
-  }
-
   class TestTimerTask extends TimerTask {
 
     def run() = {
-      brokerRouter ! StatusMail(BROKER)
-      clientRouter ! StatusMail(CLIENT)
-      topicRouter ! StatusMail(TOPIC)
+      brokerRouter ! StatusMail
+      clientRouter ! StatusMail
+      topicRouter ! StatusMail
     }
 
   }

@@ -19,17 +19,17 @@ sealed trait TopicMail extends Mail {}
 
 sealed trait ClientMail extends Mail {}
 
-case class StatusMail(val which: String) extends Mail
-
 case class StatusResMail(val which: String, val list: List[Info]) extends Mail
 
 case class RegisterBroekrMail(val cmd: RegisterBrokerReqCmd, val handler: BrokerServerHandler) extends BrokerMail
 
+case class BrokerStatusMail(val includeLazyLavel:Boolean) extends BrokerMail
+
 case class BrokerHeartMail(val cmd: HeartOfBrokerCmd) extends BrokerMail
 
-case class DisconnectMail(val id: String) extends Mail
+case class FindLazyBrokersMail(val client:ActorPath, val topic:ActorPath) extends BrokerMail
 
-case class IsConnectedMail(val id: String) extends Mail
+case class FindLazyBrokersResMail(val lazyBrokers:Set[ActorPath], val client:ActorPath) extends BrokerMail
 
 case class PublishTopicsMail(val topicList: List[String], val from: String) extends TopicMail
 
@@ -65,6 +65,11 @@ object Mail extends Enumeration {
   val BROKER = "broker"
   val CLIENT = "client"
   val TOPIC = "topic"
+
+  //mail
+  val DisconnectMail = "Disconnect"
+  val IsConnectedMail = "IsConnected"
+  val StatusMail = "Status"
 }
 
 

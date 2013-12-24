@@ -21,6 +21,7 @@ import org.elihw.manager.actor.Topic.TopicInfo
 class Topic extends Actor with ActorLogging {
 
   import context._
+  import Mail._
 
   implicit val timeout = Timeout(1 seconds)
 
@@ -42,7 +43,11 @@ class Topic extends Actor with ActorLogging {
               case Mail.CLIENT => {
                 log.debug("topic:{}关联client:{}", self.path.name, id)
                 clients += ref.path
-                ref ! FinishMail(self.path, brokers)
+                if (brokers.isEmpty) {
+                  actorSelection("/user/manager/brokerRouter") ! FindLazyBrokersMail(ref.path, self.path)
+                } else {
+                  ref ! FinishMail(self.path, brokers)
+                }
               }
             }
           }
@@ -58,12 +63,18 @@ class Topic extends Actor with ActorLogging {
     case createMail: CreateMail => {
       confirmAndUpdateStatus(createMail.id, createMail.from)
     }
-    case statusMail: StatusMail => {
+    case StatusMail => {
       sender ! TopicInfo(self.path.name, brokers, clients)
+    }
+    case findLazyBrokersResMail: FindLazyBrokersResMail => {
+      brokers ++= findLazyBrokersResMail.lazyBrokers
+      actorSelection(findLazyBrokersResMail.client) ! FinishMail(self.path, brokers)
     }
   }
 }
 
 object Topic {
-  case class TopicInfo(val name:String, val brokers: Set[ActorPath], val clients: Set[ActorPath]) extends Info{}
+
+  case class TopicInfo(val name: String, val brokers: Set[ActorPath], val clients: Set[ActorPath]) extends Info {}
+
 }

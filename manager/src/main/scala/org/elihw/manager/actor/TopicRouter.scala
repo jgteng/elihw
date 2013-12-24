@@ -2,18 +2,15 @@ package org.elihw.manager.actor
 
 import akka.actor._
 import org.elihw.manager.mail._
-import akka.actor.Identify
 import akka.pattern._
 import scala.concurrent.{Await, Future}
 import akka.util.Timeout
 import scala.concurrent.duration._
-import org.elihw.manager.actor.Topic.TopicInfo
 import org.elihw.manager.mail.CreateMail
 import org.elihw.manager.mail.PublishTopicsMail
 import akka.actor.ActorIdentity
 import scala.Some
 import akka.actor.Identify
-import org.elihw.manager.mail.StatusMail
 import org.elihw.manager.actor.Topic.TopicInfo
 
 
@@ -24,6 +21,7 @@ import org.elihw.manager.actor.Topic.TopicInfo
  */
 class TopicRouter extends Actor {
 
+  import Mail._
   import context._
 
   implicit val timeout = Timeout(1 seconds)
@@ -41,19 +39,27 @@ class TopicRouter extends Actor {
                 ref ! CreateMail(topicName.toString, creator.path.name, publishTopicsMail.from)
               }
               case ActorIdentity(topicName, None) => {
-                val topic = actorOf(Props[Topic], topicName.asInstanceOf[String])
-                topic ! CreateMail(topicName.toString, creator.path.name, publishTopicsMail.from)
+                try {
+                  val topic = actorOf(Props[Topic], topicName.asInstanceOf[String])
+                  topic ! CreateMail(topicName.toString, creator.path.name, publishTopicsMail.from)
+                } catch {
+                  case e: InvalidActorNameException => {
+                    //高并发情况下会出现
+                    val topicRef = actorSelection("/user/manager/topicRouter/" + topicName)
+                    topicRef ! CreateMail(topicName.toString, creator.path.name, publishTopicsMail.from)
+                  }
+                }
               }
             }
           }
         }
       }
     }
-    case statusMail: StatusMail => {
+    case StatusMail => {
       var list: List[TopicInfo] = List()
       children.foreach {
         child => {
-          list +:= Await.result((child ? StatusMail(Mail.TOPIC)), timeout.duration).asInstanceOf[TopicInfo]
+          list +:= Await.result((child ? StatusMail), timeout.duration).asInstanceOf[TopicInfo]
         }
       }
       sender ! StatusResMail(Mail.TOPIC, list)

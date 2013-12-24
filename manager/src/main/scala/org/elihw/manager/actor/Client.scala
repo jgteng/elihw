@@ -3,8 +3,6 @@ package org.elihw.manager.actor
 import akka.actor._
 import org.elihw.manager.mail._
 import org.elihw.manager.communication.ClientServerHandler
-import org.elihw.manager.mail.PublishTopicsMail
-import org.elihw.manager.mail.PublishMail
 import akka.pattern._
 import akka.util.Timeout
 import scala.concurrent.duration._
@@ -12,6 +10,10 @@ import scala.concurrent.Await
 import org.elihw.manager.actor.Broker.BrokerInfo
 import org.elihw.manager.other.Info
 import org.elihw.manager.actor.Client.ClientInfo
+import org.elihw.manager.mail.Mail._
+import org.elihw.manager.mail.RegisterClientMail
+import org.elihw.manager.mail.PublishTopicsMail
+import org.elihw.manager.mail.PublishMail
 
 /**
  * User: bigbully
@@ -26,6 +28,7 @@ abstract class Client(val handler: ClientServerHandler) extends Actor with Actor
 
   var topic: ActorPath = null
   var brokers: Set[ActorPath] = Set()
+  var isConnected = true
 
   def receive = {
     case publishMail: PublishMail => {
@@ -43,19 +46,25 @@ abstract class Client(val handler: ClientServerHandler) extends Actor with Actor
       this.topic = topic
       this.brokers = brokers
       handler finishRegister(self, topic.name, getBrokerBaseInfos(brokers))
-      log.info("client注册成功！注册信息为:topic:{}", topic.name)
+      log.info("client注册成功！注册信息为:clientId:{}, topic:{}", self.path.name, topic.name)
     }
-    case statusMail: StatusMail => {
+    case StatusMail => {
       sender ! getInfo
+    }
+    case DisconnectMail => {
+      isConnected = false
+    }
+    case IsConnectedMail => {
+      sender ! isConnected
     }
   }
 
-  def getInfo:ClientInfo
+  def getInfo: ClientInfo
 
   def getBrokerBaseInfos(brokers: Set[ActorPath]): Set[BrokerInfo] = {
     var baseInfos = Set[BrokerInfo]()
     for (path <- brokers) {
-      val baseInfo = Await.result(actorSelection(path) ? StatusMail(Mail.BROKER), timeout.duration).asInstanceOf[BrokerInfo]
+      val baseInfo = Await.result(actorSelection(path) ? StatusMail, timeout.duration).asInstanceOf[BrokerInfo]
       if (baseInfo != null) baseInfos += baseInfo
     }
     baseInfos
@@ -63,11 +72,12 @@ abstract class Client(val handler: ClientServerHandler) extends Actor with Actor
 }
 
 object Client {
-  case class ClientInfo(val id:String, val category:String, val topic:ActorPath, val brokers:Set[ActorPath]) extends Info {
 
-    var group:String = null
+  case class ClientInfo(val id: String, val category: String, val topic: ActorPath, val brokers: Set[ActorPath]) extends Info {
 
-    def this(id:String, category:String, group:String, topic:ActorPath, brokers:Set[ActorPath]) = {
+    var group: String = null
+
+    def this(id: String, category: String, group: String, topic: ActorPath, brokers: Set[ActorPath]) = {
       this(id, category, topic, brokers)
       this.group = group
     }
@@ -76,7 +86,7 @@ object Client {
 
   object ClientInfo {
 
-    def apply(id:String, category:String, group:String, topic:ActorPath, brokers:Set[ActorPath]) = {
+    def apply(id: String, category: String, group: String, topic: ActorPath, brokers: Set[ActorPath]) = {
       new ClientInfo(id, category, group, topic, brokers)
     }
   }

@@ -13,7 +13,6 @@ import org.elihw.manager.mail.PublishMail
 import akka.actor.ActorIdentity
 import scala.Some
 import akka.actor.Identify
-import org.elihw.manager.mail.StatusMail
 import org.elihw.manager.actor.Client.ClientInfo
 
 /**
@@ -23,6 +22,7 @@ import org.elihw.manager.actor.Client.ClientInfo
  */
 class ClientRouter extends Actor {
 
+  import Mail._
   import context._
 
   implicit val timeout = Timeout(1 seconds)
@@ -34,11 +34,11 @@ class ClientRouter extends Actor {
     case registerMail: RegisterClientMail => {
       register(registerMail.cmd.getClientId, registerMail.cmd.getClientType, registerMail.handler, registerMail)
     }
-    case statusMail: StatusMail => {
+    case StatusMail => {
       var list: List[ClientInfo] = List[ClientInfo]()
       children.foreach {
         child => {
-          list +:= Await.result((child ? StatusMail(Mail.CLIENT)), timeout.duration).asInstanceOf[ClientInfo]
+          list +:= Await.result((child ? StatusMail), timeout.duration).asInstanceOf[ClientInfo]
         }
       }
       sender ! StatusResMail(Mail.CLIENT, list)

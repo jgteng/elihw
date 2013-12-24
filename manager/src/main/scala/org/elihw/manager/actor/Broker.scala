@@ -10,7 +10,7 @@ import org.elihw.manager.mail.FinishMail
 import akka.actor.Status.Success
 import org.elihw.manager.mail.RegisterBroekrMail
 import org.elihw.manager.actor.Broker.BrokerInfo
-import org.elihw.manager.other.Info
+import org.elihw.manager.other.{LazyBrokerLevel, Info}
 
 /**
  * User: bigbully
@@ -19,11 +19,33 @@ import org.elihw.manager.other.Info
  */
 class Broker(val handler:BrokerServerHandler, val brokerInfo:BrokerInfo) extends Actor with ActorLogging {
 
+  import Mail._
+
   var topics: Set[ActorPath] = Set()
   var consumeMsgSec: Long = 0L
   var produceMsgSec: Long = 0L
   var topicHeartInfos: List[TopicHeartInfo] = null
   var isConnected = true
+
+  def lazyLevel:Int = {
+    import LazyBrokerLevel._
+    val topicHeartInfos = this.topicHeartInfos
+    if (topicHeartInfos == null){
+      HIGH
+    }else {
+      var score:Long = 0L
+      for(topicHeartInfo <- topicHeartInfos){
+        score += (topicHeartInfo.getConsumeSum.get + topicHeartInfo.getProduceSum.get)
+      }
+      if (score >= 0 && score < LEVEL1){
+        LOW
+      }else if (score >= LEVEL2 && score < LEVEL3){
+        NORMAL
+      }else {
+        HIGH
+      }
+    }
+  }
 
   def receive = {
     case registerMail: RegisterBroekrMail => {
@@ -53,16 +75,19 @@ class Broker(val handler:BrokerServerHandler, val brokerInfo:BrokerInfo) extends
     case finishMail: FinishMail => {
       topics += finishMail.topic
     }
-    case disconnectMail: DisconnectMail => {
+    case DisconnectMail => {
       isConnected = false
     }
-    case isConnectMail: IsConnectedMail => {
+    case IsConnectedMail => {
       sender ! isConnected
     }
     case response: Success => {
       handler finishRegister (self)
     }
-    case statusMail: StatusMail => {
+    case brokerStatusMail: BrokerStatusMail => {
+      sender ! BrokerInfo(brokerInfo, topics, lazyLevel)
+    }
+    case StatusMail => {
       sender ! BrokerInfo(brokerInfo, topics)
     }
   }
@@ -72,10 +97,16 @@ object Broker {
   case class BrokerInfo(val id: Int, val ip: String, val port: Int) extends Info{
 
     var topics:Set[ActorPath] = null
+    var lazyLevl:Int = 0
 
     def this(id: Int, ip: String, port: Int, topics: Set[ActorPath]) = {
       this(id, ip, port)
       this.topics = topics
+    }
+
+    def this(id: Int, ip: String, port: Int, topics: Set[ActorPath], lazyLevl:Int) = {
+      this(id, ip, port, topics)
+      this.lazyLevl = lazyLevl
     }
     override def toString: String = "id:" + id + ",ip:" + ip + ",port:" + port
   }
@@ -83,6 +114,9 @@ object Broker {
   object BrokerInfo {
     def apply(brokerInfo: BrokerInfo, topics: Set[ActorPath]) = {
       new BrokerInfo(brokerInfo.id, brokerInfo.ip, brokerInfo.port, topics)
+    }
+    def apply(brokerInfo: BrokerInfo, topics: Set[ActorPath], lazyLevel:Int) = {
+      new BrokerInfo(brokerInfo.id, brokerInfo.ip, brokerInfo.port, topics, lazyLevel)
     }
   }
 }
