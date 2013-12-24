@@ -2,10 +2,10 @@ package org.elihw.manager.communication
 
 
 import com.jd.bdp.whale.communication.{TransportConnection_Thread, ServerWorkerHandler}
-import com.jd.bdp.whale.communication.message.Message
+import com.jd.bdp.whale.communication.message.{MsgMarshallerFactory, Message}
 import com.jd.bdp.whale.common.communication.{CommonResponse, MessageType}
 import com.jd.dd.glowworm.PB
-import com.jd.bdp.whale.common.command.{HeartOfBrokerCmd, RegisterBrokerReqCmd}
+import com.jd.bdp.whale.common.command.{PublishTopicReqCmd, HeartOfBrokerCmd, RegisterBrokerReqCmd}
 import akka.actor.{PoisonPill, ActorRef}
 import java.util.{TimerTask, Timer}
 import org.elihw.manager.mail.{Mail, BrokerHeartMail, RegisterBroekrMail}
@@ -59,6 +59,30 @@ class BrokerServerHandler(val connection: TransportConnection_Thread, val broker
     val result = new Message
     result.setContent(PB.toPBBytes(CommonResponse.successResponse))
     result
+  }
+
+  def createTopic(topicName:String):Boolean = {
+    val message: Message = new Message(MessageType.PUBLISH_TOPIC_REQ, PB.toPBBytes(new PublishTopicReqCmd(topicName)), true)
+    try {
+      val result = connection.sendMsg(message, 2000)
+      if (result.getMsgType == MsgMarshallerFactory.TransportExceptionResponse_MsgType) {
+        log.error("与brokerId为:{}的broker在注册topic失败！", broker.path.name)
+        false
+      }else {
+        val commonResponse: CommonResponse = PB.parsePBBytes(result.getContent).asInstanceOf[CommonResponse]
+        if (commonResponse.getType == CommonResponse.EXCEPTION_TYPE) {
+          log.error("与brokerId为:{}的broker在注册topic失败！", broker.path.name)
+          false
+        }else {
+          true
+        }
+      }
+    }catch {
+      case e:Exception => {
+        log.error("与brokerId为:{}的broker通信失败，注册topic失败！", broker.path.name)
+        false
+      }
+    }
   }
 
   def finishRegister(broker: ActorRef) = {

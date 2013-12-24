@@ -24,7 +24,7 @@ class BrokerRouter(val maxBrokerOfTopic: Int, val maxTopicInABroker: Int) extend
 
   implicit val timeout = Timeout(1 seconds)
 
-  private def findLazyBrokers: Set[ActorPath] = {
+  def findLazyBrokers: Set[ActorPath] = {
     import LazyBrokerLevel._
 
     var lazyBrokers = Set[ActorPath]()
@@ -47,7 +47,7 @@ class BrokerRouter(val maxBrokerOfTopic: Int, val maxTopicInABroker: Int) extend
     lazyBrokers
   }
 
-  private def getLazyBrokerMap: Map[Int, Set[BrokerInfo]] = {
+  def getLazyBrokerMap: Map[Int, Set[BrokerInfo]] = {
     var lazyBrokerHolderMap: Map[Int, Set[BrokerInfo]] = Map[Int, Set[BrokerInfo]]()
     for (broker <- children) {
       if (Await.result((broker ? IsConnectedMail), timeout.duration).asInstanceOf[Boolean]) {
@@ -62,7 +62,7 @@ class BrokerRouter(val maxBrokerOfTopic: Int, val maxTopicInABroker: Int) extend
 
   def receive = {
     case registerMail: RegisterBroekrMail => {
-      val broker = context.actorOf(Props(classOf[Broker], registerMail.handler, BrokerInfo(registerMail.cmd.getId, registerMail.cmd.getIp, registerMail.cmd.getPort)), registerMail.cmd.getId.toString)
+      val broker = child(registerMail.cmd.getId.toString).getOrElse(actorOf(Props(classOf[Broker], registerMail.handler, BrokerInfo(registerMail.cmd.getId, registerMail.cmd.getIp, registerMail.cmd.getPort)), registerMail.cmd.getId.toString))
       broker ! registerMail
     }
     case StatusMail => {
@@ -75,7 +75,11 @@ class BrokerRouter(val maxBrokerOfTopic: Int, val maxTopicInABroker: Int) extend
       sender ! StatusResMail(Mail.BROKER, list)
     }
     case findLazyBrokersMail: FindLazyBrokersMail => {
-      actorSelection(findLazyBrokersMail.topic) ! FindLazyBrokersResMail(findLazyBrokers, findLazyBrokersMail.client)
+      val lazyBrokers = findLazyBrokers
+      actorSelection(findLazyBrokersMail.topic) ! FindLazyBrokersResMail(lazyBrokers, findLazyBrokersMail.client)
+      for(brokerPath <- lazyBrokers){
+        actorSelection(brokerPath) ! CreateTopicMail(findLazyBrokersMail.topic.name)
+      }
     }
   }
 

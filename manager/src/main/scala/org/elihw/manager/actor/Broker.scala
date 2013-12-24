@@ -1,6 +1,6 @@
 package org.elihw.manager.actor
 
-import akka.actor.{ActorPath, ActorLogging, ActorRef, Actor}
+import akka.actor._
 import org.elihw.manager.mail._
 import org.elihw.manager.communication.BrokerServerHandler
 import scala.collection.JavaConversions.asScalaBuffer
@@ -11,15 +11,22 @@ import akka.actor.Status.Success
 import org.elihw.manager.mail.RegisterBroekrMail
 import org.elihw.manager.actor.Broker.BrokerInfo
 import org.elihw.manager.other.{LazyBrokerLevel, Info}
+import org.elihw.manager.mail.RegisterBroekrMail
+import org.elihw.manager.mail.BrokerHeartMail
+import org.elihw.manager.mail.CreateTopicMail
+import org.elihw.manager.mail.PublishTopicsMail
+import akka.actor.Status.Success
+import org.elihw.manager.mail.BrokerStatusMail
 
 /**
  * User: bigbully
  * Date: 13-11-2
  * Time: 下午7:50
  */
-class Broker(val handler:BrokerServerHandler, val brokerInfo:BrokerInfo) extends Actor with ActorLogging {
+class Broker(var handler:BrokerServerHandler, val brokerInfo:BrokerInfo) extends Actor with ActorLogging {
 
   import Mail._
+  import context._
 
   var topics: Set[ActorPath] = Set()
   var consumeMsgSec: Long = 0L
@@ -49,18 +56,24 @@ class Broker(val handler:BrokerServerHandler, val brokerInfo:BrokerInfo) extends
 
   def receive = {
     case registerMail: RegisterBroekrMail => {
-      val cmd = registerMail.cmd
-      val topicRouter = context.actorSelection("/user/manager/topicRouter")
-      //转换java.util.list为inmutable.list
-      var topicList = List[String]()
-      for (topicName <- cmd.getTopics) {
-        topicList :+= topicName
-      }
+      if (!isConnected) {//证明是重连,替换handler
+        handler = registerMail.handler
+        handler.finishRegister(self)
+        log.info("Broker:{}重连成功", registerMail.cmd.getId)
+      }else {
+        val cmd = registerMail.cmd
+        val topicRouter = context.actorSelection("/user/manager/topicRouter")
+        //转换java.util.list为inmutable.list
+        var topicList = List[String]()
+        for (topicName <- cmd.getTopics) {
+          topicList :+= topicName
+        }
 
-      //根据broker自带的topic刷新所有topic
-      topicRouter ! PublishTopicsMail(topicList, Mail.BROKER)
-      log.info("broker注册成功！注册信息为:{}", cmd)
-      handler.finishRegister(self)
+        //根据broker自带的topic刷新所有topic
+        topicRouter ! PublishTopicsMail(topicList, Mail.BROKER)
+        log.info("broker注册成功！注册信息为:{}", cmd)
+        handler.finishRegister(self)
+      }
     }
     case brokerHeartMail: BrokerHeartMail => {
       val cmd = brokerHeartMail.cmd
@@ -89,6 +102,17 @@ class Broker(val handler:BrokerServerHandler, val brokerInfo:BrokerInfo) extends
     }
     case StatusMail => {
       sender ! BrokerInfo(brokerInfo, topics)
+    }
+    case createTopicMail: CreateTopicMail =>{
+      val result = handler createTopic createTopicMail.topicName
+      //todo 如果result = false如何处理
+    }
+  }
+
+  @throws[Exception](classOf[Exception])
+  override def postStop(): Unit = {
+    for (topicPath <- topics){
+      actorSelection(topicPath) ! DeadMail(BROKER, self.path)
     }
   }
 }

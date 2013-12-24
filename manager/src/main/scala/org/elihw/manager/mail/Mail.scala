@@ -19,6 +19,8 @@ sealed trait TopicMail extends Mail {}
 
 sealed trait ClientMail extends Mail {}
 
+case class DeadMail(val which: String, val path:ActorPath) extends Mail
+
 case class StatusResMail(val which: String, val list: List[Info]) extends Mail
 
 case class RegisterBroekrMail(val cmd: RegisterBrokerReqCmd, val handler: BrokerServerHandler) extends BrokerMail
@@ -26,6 +28,8 @@ case class RegisterBroekrMail(val cmd: RegisterBrokerReqCmd, val handler: Broker
 case class BrokerStatusMail(val includeLazyLavel:Boolean) extends BrokerMail
 
 case class BrokerHeartMail(val cmd: HeartOfBrokerCmd) extends BrokerMail
+
+case class CreateTopicMail(val topicName: String) extends BrokerMail
 
 case class FindLazyBrokersMail(val client:ActorPath, val topic:ActorPath) extends BrokerMail
 

@@ -59,6 +59,11 @@ abstract class Client(val handler: ClientServerHandler) extends Actor with Actor
     }
   }
 
+  @throws[Exception](classOf[Exception])
+  override def postStop(): Unit = {
+    actorSelection(topic) ! DeadMail(CLIENT, self.path)
+  }
+
   def getInfo: ClientInfo
 
   def getBrokerBaseInfos(brokers: Set[ActorPath]): Set[BrokerInfo] = {

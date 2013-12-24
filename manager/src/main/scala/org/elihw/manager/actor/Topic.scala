@@ -70,6 +70,16 @@ class Topic extends Actor with ActorLogging {
       brokers ++= findLazyBrokersResMail.lazyBrokers
       actorSelection(findLazyBrokersResMail.client) ! FinishMail(self.path, brokers)
     }
+    case deadMail: DeadMail => {
+      deadMail.which match {
+        case BROKER => {
+          brokers -= deadMail.path
+        }
+        case CLIENT => {
+          clients -= deadMail.path
+        }
+      }
+    }
   }
 }
 
