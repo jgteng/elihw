@@ -46,7 +46,7 @@ class Broker(var handler:BrokerServerHandler, val brokerInfo:BrokerInfo) extends
       }
       if (score >= 0 && score < LEVEL1){
         LOW
-      }else if (score >= LEVEL2 && score < LEVEL3){
+      }else if (score >= LEVEL1 && score < LEVEL2){
         NORMAL
       }else {
         HIGH
@@ -104,15 +104,17 @@ class Broker(var handler:BrokerServerHandler, val brokerInfo:BrokerInfo) extends
       sender ! BrokerInfo(brokerInfo, topics)
     }
     case createTopicMail: CreateTopicMail =>{
-      val result = handler createTopic createTopicMail.topicName
+      topics += createTopicMail.topic
+      val result = handler createTopic createTopicMail.topic.name
       //todo 如果result = false如何处理
     }
   }
 
   @throws[Exception](classOf[Exception])
   override def postStop(): Unit = {
+    val brokerPath = self.path
     for (topicPath <- topics){
-      actorSelection(topicPath) ! DeadMail(BROKER, self.path)
+      actorSelection(topicPath) ! DeadMail(BROKER, brokerPath)
     }
   }
 }

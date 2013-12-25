@@ -24,6 +24,8 @@ class BrokerRouter(val maxBrokerOfTopic: Int, val maxTopicInABroker: Int) extend
 
   implicit val timeout = Timeout(1 seconds)
 
+
+  //循环获取最懒惰的broker列表，如果没有最懒惰的，就取次懒惰的，以此类推
   def findLazyBrokers: Set[ActorPath] = {
     import LazyBrokerLevel._
 
@@ -47,6 +49,8 @@ class BrokerRouter(val maxBrokerOfTopic: Int, val maxTopicInABroker: Int) extend
     lazyBrokers
   }
 
+
+  //计算当前所有broker的懒惰程度，按等级返回
   def getLazyBrokerMap: Map[Int, Set[BrokerInfo]] = {
     var lazyBrokerHolderMap: Map[Int, Set[BrokerInfo]] = Map[Int, Set[BrokerInfo]]()
     for (broker <- children) {
@@ -78,7 +82,7 @@ class BrokerRouter(val maxBrokerOfTopic: Int, val maxTopicInABroker: Int) extend
       val lazyBrokers = findLazyBrokers
       actorSelection(findLazyBrokersMail.topic) ! FindLazyBrokersResMail(lazyBrokers, findLazyBrokersMail.client)
       for(brokerPath <- lazyBrokers){
-        actorSelection(brokerPath) ! CreateTopicMail(findLazyBrokersMail.topic.name)
+        actorSelection(brokerPath) ! CreateTopicMail(findLazyBrokersMail.topic)
       }
     }
   }

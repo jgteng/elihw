@@ -29,7 +29,7 @@ case class BrokerStatusMail(val includeLazyLavel:Boolean) extends BrokerMail
 
 case class BrokerHeartMail(val cmd: HeartOfBrokerCmd) extends BrokerMail
 
-case class CreateTopicMail(val topicName: String) extends BrokerMail
+case class CreateTopicMail(val topic: ActorPath) extends BrokerMail
 
 case class FindLazyBrokersMail(val client:ActorPath, val topic:ActorPath) extends BrokerMail
 
