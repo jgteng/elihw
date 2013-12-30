@@ -4,9 +4,9 @@ import akka.actor._
 import org.ini4j.{Profile, Ini}
 import java.io.File
 import com.jd.bdp.whale.communication.{ServerWorkerHandler, TransportConnection_Thread, ServerWorkerHandlerFactory, ServerNIO}
-import org.elihw.manager.communication.{ClientServerHandler, BrokerServerHandler}
-import org.elihw.manager.actor.{ClientRouter, TopicRouter, BrokerRouter}
-import org.elihw.manager.mail.{StatusResMail, Mail, StartManagerMail}
+import org.elihw.manager.communication.{WhaleClientHandler, WhaleBrokerHandler}
+import org.elihw.manager.actor.{CycleCheck, ClientRouter, TopicRouter, BrokerRouter}
+import org.elihw.manager.mail.{CycleTaskMail, StatusResMail, Mail, StartManagerMail}
 import java.util.{TimerTask, Timer}
 import akka.util.Timeout
 import scala.concurrent.duration._
@@ -14,6 +14,7 @@ import Mail._
 import org.elihw.manager.actor.Topic.TopicInfo
 import org.elihw.manager.actor.Broker.BrokerInfo
 import org.elihw.manager.actor.Client.ClientInfo
+import org.elihw.manager.other.{BrokerScale, LazyBrokerLevel, BusyTopicLevel}
 
 /**
  * User: bigbully
@@ -43,6 +44,7 @@ class Manager extends Actor with ActorLogging {
   var toClientServer: ServerNIO = null
 
   def initManagerServer(baseDir: String) = {
+    import context._
     val file = new File(baseDir + "/manager.ini")
     val ini = new Ini(file)
     val portSection: Profile.Section = ini.get("port")
@@ -51,27 +53,57 @@ class Manager extends Actor with ActorLogging {
 
     val managerSection: Profile.Section = ini.get("manager")
     val brokerRecheckTime = Integer.parseInt(managerSection.get("broker_recheck_time"))
-    val clientRecheckTime = Integer.parseInt(managerSection.get("client_recheck_time"))
+    val clientRecheckTime = Integer.parseInt(managerSection.get("client_recheck_time"))    
 
-    val maxBrokerOfTopic = Integer.parseInt(managerSection.get("max_broker_of_topic"))
-    val maxTopicInABroker = Integer.parseInt(managerSection.get("max_topic_in_a_broker"))
+    
+    //以下是可变属性
+    val sleepTimeStr = managerSection.get("sleep_time")
+    var sleepTime = 0
+    if (sleepTimeStr != null) sleepTime = Integer.parseInt(sleepTimeStr)
 
-    brokerRouter = context.actorOf(Props(classOf[BrokerRouter], maxBrokerOfTopic, maxTopicInABroker), "brokerRouter")
-    topicRouter = context.actorOf(Props[TopicRouter], "topicRouter")
-    clientRouter = context.actorOf(Props[ClientRouter], "clientRouter")
+    val maxBrokerOfTopicStr = managerSection.get("max_broker_of_topic")
+    if (maxBrokerOfTopicStr != null) BrokerScale.MAX_BROKER_OF_TOPIC = Integer.parseInt(maxBrokerOfTopicStr)
+
+    val maxTopicInABrokerStr = managerSection.get("max_topic_in_a_broker")
+    if (maxTopicInABrokerStr != null) BrokerScale.MAX_TOPIC_IN_A_BROKER = Integer.parseInt(maxTopicInABrokerStr)
+
+    val busyLevelStr = managerSection.get("busy_level")
+    if (busyLevelStr != null) BusyTopicLevel.LEVEL = Integer.parseInt(busyLevelStr)
+    
+    val lazyLevel1Str = managerSection.get("lazy_level1")
+    if (lazyLevel1Str != null) LazyBrokerLevel.LEVEL1 = Integer.parseInt(lazyLevel1Str)
+
+    val lazyLevel2Str = managerSection.get("lazy_level1")
+    if (lazyLevel2Str != null) LazyBrokerLevel.LEVEL2 = Integer.parseInt(lazyLevel2Str)
+
+    val lazyLevel3Str = managerSection.get("lazy_level1")
+    if (lazyLevel3Str != null) LazyBrokerLevel.LEVEL3 = Integer.parseInt(lazyLevel3Str)
+
+
+    val busyTopicCheckTimeStr = managerSection.get("busy_topic_check_time")
+    if (busyTopicCheckTimeStr != null){
+      topicRouter ! StartBusyTopicCheck
+    }
+
+    //三个router不针对指定id的broker,topic,client操作的话，都走router
+    brokerRouter = actorOf(Props[BrokerRouter], "brokerRouter")
+    topicRouter = actorOf(Props[TopicRouter], "topicRouter")
+    clientRouter = actorOf(Props[ClientRouter], "clientRouter")
 
     toBrokerServer = new ServerNIO(toBrokerPort, new ServerWorkerHandlerFactory() {
       def createServerWorkerHandler(connection: TransportConnection_Thread): ServerWorkerHandler = {
-        new BrokerServerHandler(connection, brokerRouter, brokerRecheckTime)
+        new WhaleBrokerHandler(connection, brokerRouter, brokerRecheckTime)
       }
     })
     toBrokerServer.start
     log.info("broker-server启动完成")
+    log.info("broker启动后暂停{}秒", sleepTime / 1000)
+    Thread.sleep(sleepTime)
 
     toClientServer = new ServerNIO(toClientPort, new ServerWorkerHandlerFactory() {
       def createServerWorkerHandler(connection: TransportConnection_Thread): ServerWorkerHandler = {
         log.debug("新建一个clientHandler")
-        new ClientServerHandler(connection, clientRouter, clientRecheckTime)
+        new WhaleClientHandler(connection, clientRouter, clientRecheckTime)
       }
     })
     toClientServer.start

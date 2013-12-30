@@ -21,7 +21,7 @@ object ElihwBuild extends Build {
     .settings(managerSettings: _*)
     .settings(libraryDependencies ++=
     compile(akka_slf4j, akka_actor, whale_common, whale_communication, glowworm, ini4j, logback) ++
-      test(scalaTest, akka_testkit))
+      test(scalaTest, akka_testkit, scala_mock, scala_mock_scalatest_support))
 
   lazy val client = Project(id = "client", base = file("client"))
     .settings(clientSettings: _*)

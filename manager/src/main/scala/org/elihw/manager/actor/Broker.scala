@@ -5,13 +5,10 @@ import org.elihw.manager.mail._
 import org.elihw.manager.communication.BrokerServerHandler
 import scala.collection.JavaConversions.asScalaBuffer
 import com.jd.bdp.whale.common.command.TopicHeartInfo
-import org.elihw.manager.mail.BrokerHeartMail
 import org.elihw.manager.mail.FinishMail
-import akka.actor.Status.Success
-import org.elihw.manager.mail.RegisterBroekrMail
 import org.elihw.manager.actor.Broker.BrokerInfo
 import org.elihw.manager.other.{LazyBrokerLevel, Info}
-import org.elihw.manager.mail.RegisterBroekrMail
+import org.elihw.manager.mail.RegisterBrokerMail
 import org.elihw.manager.mail.BrokerHeartMail
 import org.elihw.manager.mail.CreateTopicMail
 import org.elihw.manager.mail.PublishTopicsMail
@@ -23,46 +20,47 @@ import org.elihw.manager.mail.BrokerStatusMail
  * Date: 13-11-2
  * Time: 下午7:50
  */
-class Broker(var handler:BrokerServerHandler, val brokerInfo:BrokerInfo) extends Actor with ActorLogging {
+class Broker(var handler: BrokerServerHandler, val brokerInfo: BrokerInfo) extends Actor with ActorLogging {
 
   import Mail._
   import context._
 
+  val topicRouter = actorSelection("/user/manager/topicRouter")
   var topics: Set[ActorPath] = Set()
   var consumeMsgSec: Long = 0L
   var produceMsgSec: Long = 0L
   var topicHeartInfos: List[TopicHeartInfo] = null
   var isConnected = true
 
-  def lazyLevel:Int = {
+  def lazyLevel: Int = {
     import LazyBrokerLevel._
     val topicHeartInfos = this.topicHeartInfos
-    if (topicHeartInfos == null){
+    if (topicHeartInfos == null) {
       HIGH
-    }else {
-      var score:Long = 0L
-      for(topicHeartInfo <- topicHeartInfos){
+    } else {
+      var score: Long = 0L
+      for (topicHeartInfo <- topicHeartInfos) {
         score += (topicHeartInfo.getConsumeSum.get + topicHeartInfo.getProduceSum.get)
       }
-      if (score >= 0 && score < LEVEL1){
+      if (score >= 0 && score < LEVEL1) {
         LOW
-      }else if (score >= LEVEL1 && score < LEVEL2){
+      } else if (score >= LEVEL1 && score < LEVEL2) {
         NORMAL
-      }else {
+      } else {
         HIGH
       }
     }
   }
 
   def receive = {
-    case registerMail: RegisterBroekrMail => {
-      if (!isConnected) {//证明是重连,替换handler
+    case registerMail: RegisterBrokerMail => {
+      if (!isConnected) {
+        //证明是重连,替换handler
         handler = registerMail.handler
         handler.finishRegister(self)
         log.info("Broker:{}重连成功", registerMail.cmd.getId)
-      }else {
+      } else {
         val cmd = registerMail.cmd
-        val topicRouter = context.actorSelection("/user/manager/topicRouter")
         //转换java.util.list为inmutable.list
         var topicList = List[String]()
         for (topicName <- cmd.getTopics) {
@@ -83,6 +81,7 @@ class Broker(var handler:BrokerServerHandler, val brokerInfo:BrokerInfo) extends
       for (topicHeartInfo <- cmd.getBrokerHeartInfos) {
         topicHeartInfos :+= topicHeartInfo
       }
+      topicRouter ! TopicInfosMail(topicHeartInfos)//向所有topic发布他们自己的topicHeart
       log.debug("收到心跳信息{}", cmd)
     }
     case finishMail: FinishMail => {
@@ -103,7 +102,7 @@ class Broker(var handler:BrokerServerHandler, val brokerInfo:BrokerInfo) extends
     case StatusMail => {
       sender ! BrokerInfo(brokerInfo, topics)
     }
-    case createTopicMail: CreateTopicMail =>{
+    case createTopicMail: CreateTopicMail => {
       topics += createTopicMail.topic
       val result = handler createTopic createTopicMail.topic.name
       //todo 如果result = false如何处理
@@ -113,27 +112,29 @@ class Broker(var handler:BrokerServerHandler, val brokerInfo:BrokerInfo) extends
   @throws[Exception](classOf[Exception])
   override def postStop(): Unit = {
     val brokerPath = self.path
-    for (topicPath <- topics){
+    for (topicPath <- topics) {
       actorSelection(topicPath) ! DeadMail(BROKER, brokerPath)
     }
   }
 }
 
 object Broker {
-  case class BrokerInfo(val id: Int, val ip: String, val port: Int) extends Info{
 
-    var topics:Set[ActorPath] = null
-    var lazyLevl:Int = 0
+  case class BrokerInfo(val id: Int, val ip: String, val port: Int) extends Info {
+
+    var topics: Set[ActorPath] = null
+    var lazyLevl: Int = 0
 
     def this(id: Int, ip: String, port: Int, topics: Set[ActorPath]) = {
       this(id, ip, port)
       this.topics = topics
     }
 
-    def this(id: Int, ip: String, port: Int, topics: Set[ActorPath], lazyLevl:Int) = {
+    def this(id: Int, ip: String, port: Int, topics: Set[ActorPath], lazyLevl: Int) = {
       this(id, ip, port, topics)
       this.lazyLevl = lazyLevl
     }
+
     override def toString: String = "id:" + id + ",ip:" + ip + ",port:" + port
   }
 
@@ -141,10 +142,12 @@ object Broker {
     def apply(brokerInfo: BrokerInfo, topics: Set[ActorPath]) = {
       new BrokerInfo(brokerInfo.id, brokerInfo.ip, brokerInfo.port, topics)
     }
-    def apply(brokerInfo: BrokerInfo, topics: Set[ActorPath], lazyLevel:Int) = {
+
+    def apply(brokerInfo: BrokerInfo, topics: Set[ActorPath], lazyLevel: Int) = {
       new BrokerInfo(brokerInfo.id, brokerInfo.ip, brokerInfo.port, topics, lazyLevel)
     }
   }
+
 }
 
 

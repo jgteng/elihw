@@ -2,7 +2,7 @@ package org.elihw.manager.actor
 
 import akka.actor._
 import org.elihw.manager.mail._
-import org.elihw.manager.communication.ClientServerHandler
+import org.elihw.manager.communication.WhaleClientHandler
 import akka.pattern._
 import akka.util.Timeout
 import scala.concurrent.duration._
@@ -20,7 +20,7 @@ import org.elihw.manager.mail.PublishMail
  * Date: 13-11-27
  * Time: 下午9:04
  */
-abstract class Client(val handler: ClientServerHandler) extends Actor with ActorLogging {
+abstract class Client(val handler: WhaleClientHandler) extends Actor with ActorLogging {
 
   import context._
 
@@ -56,6 +56,12 @@ abstract class Client(val handler: ClientServerHandler) extends Actor with Actor
     }
     case IsConnectedMail => {
       sender ! isConnected
+    }
+    case brokerOffLine:BrokerOffLine => {
+      handler notifyBrokerOffLine(brokerOffLine.brokerId, topic.name)
+    }
+    case brokerOnLine:BrokerOnLine => {
+      handler notifyBrokerOnLine(brokerOnLine.brokerId, topic.name)
     }
   }
 
@@ -97,3 +103,18 @@ object Client {
   }
 
 }
+
+class Producer(handler:WhaleClientHandler) extends Client(handler){
+
+  override def getInfo: ClientInfo = {
+    ClientInfo(self.path.name, Mail.PRODUCER, topic, brokers)
+  }
+}
+
+class Consumer(handler:WhaleClientHandler, val group:String) extends Client(handler){
+
+  override def getInfo: ClientInfo = {
+    ClientInfo(self.path.name, Mail.CONSUMER, group, topic, brokers)
+  }
+}
+

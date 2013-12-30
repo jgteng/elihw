@@ -12,6 +12,7 @@ import akka.actor.ActorIdentity
 import scala.Some
 import akka.actor.Identify
 import org.elihw.manager.actor.Topic.TopicInfo
+import java.util.{Timer, TimerTask}
 
 
 /**
@@ -19,12 +20,13 @@ import org.elihw.manager.actor.Topic.TopicInfo
  * Date: 13-11-23
  * Time: 下午1:30
  */
-class TopicRouter extends Actor {
+class TopicRouter extends Actor with ActorLogging{
 
   import Mail._
   import context._
 
   implicit val timeout = Timeout(1 seconds)
+  var busyTopic:Set[String] = Set()
 
   def receive: Actor.Receive = {
     case publishTopicsMail: PublishTopicsMail => {
@@ -64,5 +66,29 @@ class TopicRouter extends Actor {
       }
       sender ! StatusResMail(Mail.TOPIC, list)
     }
+    case startBusyTopicCheckMail:StartBusyTopicCheckMail => {
+      new Timer().schedule(new BusyTopicCheckTask, startBusyTopicCheckMail.delay, startBusyTopicCheckMail.checkPeriod)
+    }
+    case topicInfosMail:TopicInfosMail => {
+      for(topicInfo <- topicInfosMail.topicInfos) {
+        child(topicInfo.getTopicName) match {
+          case Some(ref) => {
+            ref ! TopicHeartInfoMail(topicInfosMail.brokerId, topicInfo)
+          }
+          case None => {
+            log.debug("topic:{}已销毁,不再接受心跳", topicInfo.getTopicName)
+          }
+        }
+      }
+    }
   }
+
+  class BusyTopicCheckTask extends TimerTask {
+    def run = {
+      for(topic <- children) {
+        topic ! AreYouBusyNow
+      }
+    }
+  }
+
 }

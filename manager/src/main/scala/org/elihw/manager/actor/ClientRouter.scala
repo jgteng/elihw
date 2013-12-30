@@ -6,7 +6,7 @@ import com.jd.bdp.whale.common.communication.MessageType
 import akka.pattern._
 import akka.util.Timeout
 import scala.concurrent.duration._
-import org.elihw.manager.communication.ClientServerHandler
+import org.elihw.manager.communication.WhaleClientHandler
 import scala.concurrent.Await
 import org.elihw.manager.mail.RegisterClientMail
 import org.elihw.manager.mail.PublishMail
@@ -45,7 +45,7 @@ class ClientRouter extends Actor {
     }
   }
 
-  def register(clientId: String, clientType: Int, handler: ClientServerHandler, mail: ClientMail) = {
+  def register(clientId: String, clientType: Int, handler: WhaleClientHandler, mail: ClientMail) = {
     (actorSelection(clientId) ? Identify(clientId)).mapTo[ActorIdentity].foreach {
       (actorIdentity: ActorIdentity) => {
         actorIdentity match {

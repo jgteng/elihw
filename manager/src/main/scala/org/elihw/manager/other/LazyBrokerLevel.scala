@@ -11,7 +11,7 @@ object LazyBrokerLevel extends Enumeration {
   val NORMAL = 2
   val HIGH = 3
 
-  val LEVEL1 = 5000 * 60
-  val LEVEL2 = 50000 * 60
-  val LEVEL3 = 500000 * 60
+  var LEVEL1 = 5000 * 60
+  var LEVEL2 = 50000 * 60
+  var LEVEL3 = 500000 * 60
 }
